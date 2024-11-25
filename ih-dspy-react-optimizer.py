@@ -16,3 +16,4 @@ react = dspy.ReAct("question -> answer", tools=[])
 tp = dspy.MIPROv2(metric=dspy.evaluate.answer_exact_match, auto="light", num_threads=5)
 optimized_react = tp.compile(react, trainset=trainset[:20])
 
+optimized_react.save("outputs/" + "open_ai_gpt4o_trial_1.json")
