@@ -1,26 +1,26 @@
 import dspy
 import pandas as pd
 
-df = pd.read_csv("data/ddx_cases.csv")
+df = pd.read_csv("data/seperated_patient_prompts.csv")
 
 print(df.columns)
 
-new_df = df[["Case ID", "Diagnosis", "Patient Case Prompt"]]
+new_df = df[["case_id", "diagnosis", "patient_case_prompt", "history"]]
 
 print(new_df)
 
 training_examples = []
 
 for index,row in new_df.iterrows():
-    case_id = row["Case ID"]
-    diagnosis = row["Diagnosis"]
-    patient_case_prompt = row["Patient Case Prompt"]
+    case_id = row["case_id"]
+    diagnosis = row["diagnosis"]
+    patient_case_prompt = row["history"]
 
     example = dspy.Example(
         case_id = case_id,
-        question = "For the shared patient case output a top diagnosis string. " + patient_case_prompt,
-        answer = diagnosis
-    ).with_inputs("question")
+        case = patient_case_prompt,
+        diagnosis = diagnosis
+    ).with_inputs("case")
 
     training_examples.append(example)
 
