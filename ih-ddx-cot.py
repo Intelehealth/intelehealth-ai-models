@@ -1,26 +1,18 @@
 import dspy
 from utils import prepare_ddx_data
+from utils.metric_utils import metric_fun, openai_llm_judge
 import os
+from dotenv import load_dotenv
+
+load_dotenv(
+    "ops/.env"
+)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 trainset = prepare_ddx_data.ret_training_examples()
 print(trainset[:2])
 
-
-def metric_fun(gold, pred, trace=None):
-    print(gold.diagnosis)
-    print(pred.diagnosis)
-
-    gold_d = gold.diagnosis.lower()
-    pred_d = pred.diagnosis.lower()
-
-    if gold_d == pred_d:
-        return 1.0
-    elif gold_d in pred_d or pred_d in gold_d:
-        return 1.0
-    else:
-        return 0.0
 
 class DDxFields(dspy.Signature):
     """You are a doctor with the following patient rural India.
@@ -38,7 +30,7 @@ dspy.configure(lm=lm)
 cot = dspy.ChainOfThought(DDxFields)
 
 # metric has to be turned to refined manual function here
-tp = dspy.MIPROv2(metric=metric_fun, auto="light", num_threads=5)
+tp = dspy.MIPROv2(metric=openai_llm_judge, num_threads=10)
 optimizedcot = tp.compile(cot, trainset=trainset)
 
-optimizedcot.save("outputs/" + "ddx_open_ai_gpt4o_cot_trial_5_lowercase_metric.json")
+optimizedcot.save("outputs/" + "ddx_open_ai_gpt4o_cot_trial2_llm_judge_metric.json")
