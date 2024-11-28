@@ -2,6 +2,7 @@ import dspy
 from utils import prepare_ddx_data
 from utils.metric_utils import metric_fun, openai_llm_judge
 import os
+import random
 from dotenv import load_dotenv
 
 load_dotenv(
@@ -12,6 +13,8 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 trainset = prepare_ddx_data.ret_training_examples()
 print(trainset[:2])
+random.shuffle(trainset)
+
 
 
 class DDxFields(dspy.Signature):
@@ -23,7 +26,7 @@ class DDxFields(dspy.Signature):
     diagnosis = dspy.OutputField(desc="Topmost diagnosis for the patient")
     rationale = dspy.OutputField(desc="a detailed explanation for this diagnosis")
 
-lm = dspy.LM('openai/gpt-4o', api_key=OPENAI_API_KEY, temperature=0.5)
+lm = dspy.LM('openai/gpt-4o', api_key=OPENAI_API_KEY, temperature=1.0)
 
 dspy.configure(lm=lm)
 
@@ -33,4 +36,4 @@ cot = dspy.ChainOfThought(DDxFields)
 tp = dspy.MIPROv2(metric=openai_llm_judge, num_threads=10)
 optimizedcot = tp.compile(cot, trainset=trainset)
 
-optimizedcot.save("outputs/" + "ddx_open_ai_gpt4o_cot_trial2_llm_judge_metric.json")
+optimizedcot.save("outputs/" + "ddx_open_ai_gpt4o_cot_trial3_llm_judge_metric.json")
