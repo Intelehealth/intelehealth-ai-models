@@ -15,12 +15,14 @@ for index,row in new_df.iterrows():
     case_id = row["case_id"]
     diagnosis = row["diagnosis"]
     patient_case_prompt = row["history"]
+    question = row["patient_case_prompt"]
 
     example = dspy.Example(
         case_id = case_id,
         case = patient_case_prompt,
+        question = question,
         diagnosis = diagnosis
-    ).with_inputs("case")
+    ).with_inputs("case", "question")
 
     training_examples.append(example)
 
