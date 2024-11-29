@@ -1,7 +1,13 @@
 import dspy
 import pandas as pd
 
-df = pd.read_csv("data/seperated_patient_prompts.csv")
+# df = pd.read_csv("data/seperated_patient_prompts.csv")
+
+# print(df.columns)
+
+# new_df = df[["case_id", "diagnosis", "patient_case_prompt", "history"]]
+
+df = pd.read_csv("data/DDx_database-190-cases-data-cleaned.csv")
 
 print(df.columns)
 

@@ -26,7 +26,7 @@ dspy.configure(lm=lm)
 
 
 # metric has to be turned to refined manual function here
-tp = dspy.MIPROv2(metric=openai_llm_judge, num_threads=10)
-optimizedcot = tp.compile(DDxModule(), trainset=trainset)
+tp = dspy.MIPROv2(metric=openai_llm_judge, num_threads=5)
+optimizedcot = tp.compile(DDxModule(), trainset=trainset, num_trials=10)
 
-optimizedcot.save("outputs/" + "ddx_open_ai_gpt-01_cot_trial1_llm_judge_metric.json")
+optimizedcot.save("outputs/" + "ddx_open_ai_gpt-01_cot_trial_cleaned_data_llm_judge_metric.json")
