@@ -5,6 +5,8 @@ import os
 import random
 from dotenv import load_dotenv
 
+from modules.DDxModule import DDxModule
+
 load_dotenv(
     "ops/.env"
 )
@@ -17,23 +19,14 @@ random.shuffle(trainset)
 
 
 
-class DDxFields(dspy.Signature):
-    """You are a doctor with the following patient rural India.
-    Here is their case with the history of presenting illness, their physical exams, and demographics.
-    What would be the top differential diagnosis for this patient?
-    Please remember this is a patient in rural India and use this as a consideration for the diseases likely for the patient."""
-    case = dspy.InputField(desc="case with the history of presenting illness, physical exams, and demographics of a patient")
-    diagnosis = dspy.OutputField(desc="Topmost diagnosis for the patient")
-    rationale = dspy.OutputField(desc="a detailed explanation for this diagnosis")
 
 lm = dspy.LM('openai/gpt-4o', api_key=OPENAI_API_KEY, temperature=1.0)
 
 dspy.configure(lm=lm)
 
-cot = dspy.ChainOfThought(DDxFields)
 
 # metric has to be turned to refined manual function here
 tp = dspy.MIPROv2(metric=openai_llm_judge, num_threads=10)
-optimizedcot = tp.compile(cot, trainset=trainset)
+optimizedcot = tp.compile(DDxModule(), trainset=trainset)
 
-optimizedcot.save("outputs/" + "ddx_open_ai_gpt4o_cot_trial3_llm_judge_metric.json")
+optimizedcot.save("outputs/" + "ddx_open_ai_gpt-01_cot_trial1_llm_judge_metric.json")
