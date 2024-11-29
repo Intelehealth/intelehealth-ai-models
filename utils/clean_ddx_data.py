@@ -1,11 +1,11 @@
 import dspy
 import pandas as pd
 
-df = pd.read_csv("../data/190_cases.csv")
+df = pd.read_csv("../data/DDx_database-190-cases-data.csv")
 
 print(df.columns)
 
-new_df = df[["Case ID", "Diagnosis", "Patient Case Prompt"]]
+new_df = df[["Case No.", "Specialty", "Case ID", "Final Diagnosis", "Patient Case Prompt"]]
 
 print(new_df)
 
@@ -15,7 +15,7 @@ for index,row in new_df.iterrows():
     print("-------------------")
     print(index)
     case_id = row["Case ID"]
-    diagnosis = row["Diagnosis"]
+    diagnosis = row["Final Diagnosis"]
     patient_case_prompt = row["Patient Case Prompt"]
     history = ""
     prompt = ""
@@ -27,10 +27,6 @@ for index,row in new_df.iterrows():
     parts = patient_case_prompt.split(delimiter, maxsplit=1)
     instruction = delimiter.strip()
     case_details = parts[1].strip() if len(parts) > 1 else ""
-
-    # Output the results
-    # print("Instruction:\n", instruction)
-    # print("\nCase Details:\n", case_details)
 
     if len(case_details) < 2:
         parts = patient_case_prompt.split("HISTORY", maxsplit=1)
@@ -48,6 +44,8 @@ for index,row in new_df.iterrows():
         case_details = " Salient features \n" + parts[1].strip() if len(parts) > 1 else ""  # Everything after "Salient Features"
 
     training_examples.append({
+        "Case No.": row["Case No."],
+        "speciality": row["Specialty"],
         "case_id": case_id,
         "diagnosis": diagnosis,
         "original": row["Patient Case Prompt"],
@@ -59,4 +57,4 @@ for index,row in new_df.iterrows():
 
 training_df = pd.DataFrame(training_examples)
 print(training_df)
-training_df.to_csv("../data/seperated_patient_prompts.csv", index=False)
+training_df.to_csv("../data/DDx_database-190-cases-data-cleaned.csv", index=False)

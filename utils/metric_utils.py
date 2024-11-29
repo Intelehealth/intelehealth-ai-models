@@ -44,7 +44,8 @@ def openai_llm_judge(gold, pred, trace=None):
     
     print("############## evaluating open ai llm judge ###############")
     print(gold.diagnosis)
-    print(pred.diagnosis)
+    pred_diagnosis = pred.output.diagnosis
+    print(pred_diagnosis)
 
     print("\n")
     response = client.beta.chat.completions.parse(
@@ -52,7 +53,7 @@ def openai_llm_judge(gold, pred, trace=None):
         messages=[
             {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for qiven case history of a patient for a doctor in rural India."},   
             {"role": "user", "content": f"Expected output: " + gold.diagnosis},
-            {"role": "user", "content": f"Predicted output: " + pred.diagnosis },
+            {"role": "user", "content": f"Predicted output: " + pred_diagnosis },
             {"role": "user", "content": """Evaluate the semantic similarity between the predicted and expected outputs. Consider the following: 
              1. Are the diagnosis similar?
              2. Is the core meaning preserved even if the wording differs from medical terminologies and synomyms for the diagnosis?

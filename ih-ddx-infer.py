@@ -16,7 +16,7 @@ dspy.configure(lm=lm)
 
 
 cot = DDxModule()
-cot.load("outputs/" + "ddx_open_ai_gpt-01_cot_trial1_llm_judge_metric.json")
+cot.load("outputs/" + "ddx_open_ai_gpt-01_cot_trial_cleaned_data_llm_judge_metric.json")
 
 case = """
 HISTORY 
@@ -48,10 +48,44 @@ LABORATORY
 WBC 13; Hct. Plt Count normal; Cr 1.2; serum urate normal; INR 1.0.
 """
 
+case_2 = """
+"You are a doctor with the following patient rural India. Here is their case with the history of presenting illness, their physical exams, and demographics. What would be the top 5 differential diagnosis for this patient? Please rank the differential diagnoses based on the likelihood and provide a detailed explanation for each diagnosis. Please remember this is a patient in rural India and use this as a consideration for the diseases likely for the patient.
+
+Mr …, 65 years old, retired police officer, normotensive, nondiabetic, nonsmoker presented with multiple blisters over different parts of the body for 2 months. The blisters at first appeared over forearms and gradually involved axilla, groin and front and back of trunk. Most of the
+blisters are large and tense, few are small. Some blisters have ruptured leaving denuded areas that have healed spontaneously. He also noticed erythematous patches over the front and back of the trunk, some of which healed spontaneously. There is no involvement of the mouth or genitalia. The patient also complains of mild generalized itching for the same duration. He had similar attack 3 years back, but the lesions were sparse and recovered completely. He did not complain of difficulty in swallowing. There is no history of fever, joint pain, muscle pain or intake of any drugs prior to the appearance of these blisters. His bowel and bladder habits are normal.
+
+General examination
+ 
+The patient looks very ill and apathetic.  Mildly anemic. No jaundice, cyanosis, edema, dehydration, clubbing, koilonychias, leukonychia. No lymphadenopathy and no thyromegaly
+
+ Pulse—98/min
+ Blood pressure—110/70 mm of Hg
+ Temperature—98 °F
+ Respiratory rate—20/min.
+
+Integumentary system
+1. Skin:
+ Multiple large tense bulla are present over flexor aspect of forearms, groin, axilla, front and
+back of the trunk, some are on normal skin and some are on erythematous skin. Intact blisters
+contain clear fluid. Some bullae are ruptured. There are multiple denuded areas that do not increase by confluence. Most of the ruptured bullae are in healing stage and some are healed with mild hyperpigmentation.
+Dermatology
+ Erythematous patches are mostly observed over the trunk. Most of the lesions show central 
+ Nikolsky and Asboe-Hansen signs are negative.
+
+2. Hair: normal.
+
+3. Nail: normal.
+
+4. Mucous membrane:
+ Conjunctival—normal.
+ Oral—normal.
+ Genital—normal.Examination of other systems reveals no abnormalities."
+"""
+
 question = """
 You are a doctor with the following patient rural India. Here is their case with the history of presenting illness, their physical exams, and demographics. What would be the top 5 differential diagnosis for this patient? Please rank the differential diagnoses based on the likelihood and provide a detailed explanation for each diagnosis. Please remember this is a patient in rural India and use this as a consideration for the diseases likely for the patient.
 """
-output = cot(case=case, question=question)
+output = cot(case=case_2, question=question)
 
 print("############ INFERENCE: #############")
 print("Diagnosis :" , output.output.diagnosis)
