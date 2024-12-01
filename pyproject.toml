@@ -14,3 +14,4 @@ build-backend = "poetry.core.masonry.api"
 python = ">=3.10"
 
 dspy="2.5.39"
+google-generativeai="0.8.3"
