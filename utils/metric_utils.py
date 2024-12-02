@@ -4,6 +4,7 @@ import json
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
+import time
 
 load_dotenv(
     "ops/.env"
@@ -71,9 +72,10 @@ def openai_llm_judge(gold, pred, trace=None):
     print("Response from llm:")
     print("LLM Judge score: ", content.score)
     score = content.score
-    print("Rationale: ", content.rationale)
     rationale = content.rationale
-
+    print("Rationale: ", content.rationale)
     
+
+    time.sleep(2)
 
     return score
