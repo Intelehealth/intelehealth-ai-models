@@ -27,6 +27,10 @@ class DdxResponse(BaseModel):
     rationale: str
 
 
+class GDdxResponse(BaseModel):
+    score: float
+    rationale: str
+
 def metric_fun(gold, pred, trace=None):
     print(gold.diagnosis)
     print(pred.diagnosis)
@@ -76,6 +80,6 @@ def openai_llm_judge(gold, pred, trace=None):
     print("Rationale: ", content.rationale)
     
 
-    time.sleep(2)
+    # time.sleep(2)
 
     return score

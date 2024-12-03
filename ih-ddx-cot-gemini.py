@@ -12,12 +12,12 @@ load_dotenv(
 )
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-gemini = dspy.Google("models/gemini-1.5-pro", api_key=GEMINI_API_KEY, temperature=1.0)
-dspy.settings.configure(lm=gemini, max_tokens=10000)
+gemini = dspy.Google("gemini-1.5-pro", api_key=GEMINI_API_KEY, temperature=1.0)
+dspy.settings.configure(lm=gemini, max_tokens=5000)
 
 trainset = prepare_ddx_data.ret_training_examples()
 print(trainset[:2])
-random.shuffle(trainset)
+random.shuffle(trainset[:50])
 
 
 # metric has to be turned to refined manual function here

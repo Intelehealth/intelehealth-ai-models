@@ -25,7 +25,7 @@ for index,row in new_df.iterrows():
 
     example = dspy.Example(
         case_id = case_id,
-        case = patient_case_prompt,
+        case = str(patient_case_prompt),
         question = question,
         diagnosis = diagnosis
     ).with_inputs("case", "question")
