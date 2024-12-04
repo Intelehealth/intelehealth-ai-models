@@ -5,6 +5,10 @@ import os
 import random
 from dotenv import load_dotenv
 from modules.DDxModule import DDxModule
+import sys
+
+trained_file = str(sys.argv[1])
+
 load_dotenv(
     "ops/.env"
 )
@@ -16,7 +20,7 @@ dspy.configure(lm=lm)
 
 
 cot = DDxModule()
-cot.load("outputs/" + "ddx_open_ai_gpt-01_cot_trial_cleaned_data_llm_judge_metric.json")
+cot.load("outputs/" + trained_file)
 
 case = """
 HISTORY 
@@ -92,3 +96,5 @@ print("Diagnosis :" , output.output.diagnosis)
 
 print("\n")
 print("Rationale :", output.output.rationale)
+
+print(lm.inspect_history(n=1))
