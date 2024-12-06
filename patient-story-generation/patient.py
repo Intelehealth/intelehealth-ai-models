@@ -17,7 +17,26 @@ class PatientData:
         duplicates_1 = self.data_1['Patient_id'].duplicated().sum()
         duplicates_2 = self.data_2['Patient_id'].duplicated().sum()
         return duplicates_1, duplicates_2
+
+    def read_common_data_to_dict(self):
+        # Create a common dictionary with Patient_id as the key
+        common_dict = {}
         
+        # Populate the dictionary with data from the first CSV
+        for _, row in self.data_1.iterrows():
+            common_dict[row['Patient_id']] = row.to_dict()
+        
+        # Update the dictionary with data from the second CSV
+        for _, row in self.data_2.iterrows():
+            patient_id = row['Patient_id']
+            if patient_id in common_dict:
+                common_dict[patient_id].update(row.to_dict())
+            else:
+                common_dict[patient_id] = row.to_dict()
+        
+        return common_dict
+
+
 import time
 start_time = time.time()
 pdata = PatientData("../data/Patient_Story_RawData1.csv", "../data/Patient_Story_RawData2.csv")
@@ -31,3 +50,5 @@ duplicates = pdata.count_duplicate_patient_ids()
 print("Duplicates in CSV 1:", duplicates[0])
 print("Duplicates in CSV 2:", duplicates[1])
 
+common_data_dict = pdata.read_common_data_to_dict()
+print("Common Data Dictionary:", common_data_dict[952268785])
