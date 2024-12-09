@@ -9,5 +9,5 @@ class DDxModule(dspy.Module):
 
     def forward(self, case, question):
         prediction = self.generate_answer(case=case, question=question)
-        print(prediction)
+        # print(prediction)
         return dspy.Prediction(output=prediction)
