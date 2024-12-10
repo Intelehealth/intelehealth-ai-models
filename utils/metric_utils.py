@@ -90,7 +90,7 @@ def openai_llm_judge(gold, pred, trace=None):
 
 
 def load_gemini_lm():
-    gemini = dspy.Google("models/gemini-1.5-pro", api_key=GEMINI_API_KEY, temperature=1.0)
+    gemini = dspy.Google("models/gemini-1.5-pro", api_key=GEMINI_API_KEY, temperature=1.0, top_k=5)
     dspy.settings.configure(lm=gemini, max_tokens=10000)
 
 def load_open_ai_lm():
