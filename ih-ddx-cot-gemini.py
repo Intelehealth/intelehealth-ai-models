@@ -15,11 +15,12 @@ load_gemini_lm()
 
 trainset = prepare_ddx_data.ret_training_examples()
 print(trainset[:2])
-random.shuffle(trainset[:50])
+random.shuffle(trainset)
+
 
 
 # metric has to be turned to refined manual function here
 tp = dspy.MIPROv2(metric=openai_llm_judge, num_threads=5)
-optimizedcot = tp.compile(DDxModule(), trainset=trainset, num_trials=5)
+optimizedcot = tp.compile(DDxModule(), trainset=trainset, num_trials=10)
 
-optimizedcot.save("outputs/" + "ddx_open_ai_gemini_pro_medpalm_cot_cleaned_data_llm_judge_metric.json")
+optimizedcot.save("outputs/" + "ddx_open_ai_gemini_pro_medpalm_added_cot_traces_cleaned_data_llm_judge_metric.json")
