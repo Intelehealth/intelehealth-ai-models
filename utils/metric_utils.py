@@ -6,6 +6,9 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import time
 import dspy
+import litellm
+
+litellm.drop_params = True
 
 load_dotenv(
     "ops/.env"
@@ -15,6 +18,11 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_ORG_ID = os.getenv("OPENAI_ORG_ID")
 OPENAI_PROJECT_ID = os.getenv("OPENAI_PROJECT_ID")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+MEDLM_API_BASE = os.getenv("MEDLM_API_BASE")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+HYPERBOLIC_API_KEY = os.getenv("HYPERBOLIC_API_KEY")
+HYPERBOLIC_API_BASE = os.getenv("HYPERBOLIC_API_BASE")
+MEDLM_PROJECT_JSON = os.getenv("MEDLM_PROJECT_JSON")
 
 client = OpenAI(
   api_key = OPENAI_API_KEY,
@@ -88,11 +96,50 @@ def openai_llm_judge(gold, pred, trace=None):
 
     return score
 
+def load_groq_llama_3_1():
+    llama = dspy.GROQ(model="llama-3.1-8b-instant", api_key = GROQ_API_KEY)
+    dspy.settings.configure(lm=llama, max_tokens=10000, top_k=3)
+
+def load_hyperbolic_llama_3_1():
+    lm = dspy.LM('openai/meta-llama/Llama-3.3-70B-Instruct', api_key=HYPERBOLIC_API_KEY, api_base=HYPERBOLIC_API_BASE)
+    dspy.configure(lm=lm, max_tokens=10000, top_k=5)
 
 def load_gemini_lm():
-    gemini = dspy.Google("models/gemini-1.5-pro", api_key=GEMINI_API_KEY, temperature=1.0, top_k=5)
-    dspy.settings.configure(lm=gemini, max_tokens=10000)
+    gemini = dspy.Google("models/gemini-1.5-pro", api_key=GEMINI_API_KEY,)
+    dspy.settings.configure(lm=gemini, max_tokens=10000, top_k=5)
+
+def load_gemini2_lm():
+    gemini = dspy.Google("models/gemini-2.0-flash-exp", api_key=GEMINI_API_KEY)
+    dspy.settings.configure(lm=gemini, max_tokens=10000, top_k=5)
+
+def load_gemini_vertexai_lm():
+    print("loading gemini vertex ai")
+    try:
+        gemini = dspy.LM('vertex_ai/gemini-1.5-pro', api_key=GEMINI_API_KEY, api_base=MEDLM_API_BASE,
+                 vertex_credentials=MEDLM_PROJECT_JSON)
+        # gemini = dspy.GoogleVertexAI(
+        #     model=MEDLM_MODEL,
+        #     project=MEDLM_PROJECT_ID,
+        #     location="us-central1",
+        #     credentials=MEDLM_PROJECT_JSON
+        #     )
+        dspy.settings.configure(lm=gemini, max_tokens=10000, temperature=1.0, top_k=7)
+    except:
+        print("cannot load")
 
 def load_open_ai_lm():
     lm = dspy.LM('openai/gpt-4o', api_key=OPENAI_API_KEY, temperature=1.0)
+    dspy.configure(lm=lm, top_k=5)
+
+def load_open_ai_o1_mini_lm():
+    lm = dspy.LM('o1-mini', api_key=OPENAI_API_KEY, max_tokens=8000, temperature=1.0)
+    dspy.configure(lm=lm,  top_k=5)
+
+def load_vertex_ai_url_lm():
+    lm = dspy.LM('vertex_ai/gemini-1.5-pro', api_key=GEMINI_API_KEY, api_base=MEDLM_API_BASE,
+                 vertex_credentials=MEDLM_PROJECT_JSON)
+    dspy.configure(lm=lm)
+
+def load_ollama_url():
+    lm = dspy.LM('ollama_chat/meditron', api_base='http://localhost:11434', api_key='')
     dspy.configure(lm=lm)
