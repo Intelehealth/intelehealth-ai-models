@@ -145,6 +145,16 @@ def load_vertex_ai_url_lm():
                  vertex_credentials=MEDLM_PROJECT_JSON)
     dspy.configure(lm=lm)
 
-def load_ollama_url():
+def load_ollama_openbio_70b_llm_url():
     lm = dspy.LM('ollama_chat/taozhiyuai/openbiollm-llama-3:70b_q2_k', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0)
+    dspy.configure(lm=lm, top_k=5)
+
+
+def load_ollama_meditron_70b_url():
+    lm = dspy.LM('ollama_chat/meditron:70b', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0)
+    dspy.configure(lm=lm, top_k=5)
+
+
+def load_ollama_deepseek_70b_llm_url():
+    lm = dspy.LM('ollama_chat/deepseek-r1:70b', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0)
     dspy.configure(lm=lm, top_k=5)
