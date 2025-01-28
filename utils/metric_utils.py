@@ -56,8 +56,37 @@ def metric_fun(gold, pred, trace=None):
 
 import sys
 
+
+def gemini_llm_judge(gold, pred, trace=None):
+    print("############## evaluating gemini llm judge ###############")
+    print(gold.diagnosis)
+    pred_diagnosis = pred.output
+    print(pred_diagnosis)
+
+    print("\n")
+    messages = [
+        {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for given case history of a patient for a doctor in rural India."},
+        {"role": "user", "content": f"Expected output: {gold.diagnosis}\nPredicted output: {str(pred_diagnosis)}\n\nEvaluate the semantic similarity between the predicted and expected outputs. Consider the following:\n1. Is the expected diagnosis present in the top 5 diagnoses predicted?\n2. Is the core meaning preserved even if the wording differs from medical terminologies and synonyms for the matching expected and predicted diagnosis?\n3. Are there any significant omissions or additions in the predicted output?\n\nProvide output as valid JSON with field `score` as '1' for similar and '0' for not similar and field `rationale` having the reasoning string for this score."}
+    ]
+
+    gemini = dspy.Google("models/gemini-1.5-pro", api_key=GEMINI_API_KEY)
+    dspy.settings.configure(lm=gemini, max_tokens=10000, temperature=0.1)
+    response = gemini.complete(messages[-1]["content"])
+
+    try:
+        content = json.loads(response)
+        score = content['score']
+        rationale = content['rationale']
+        print("Response from llm:")
+        print("LLM Judge score: ", score)
+        print("Rationale: ", rationale)
+        return score
+    except json.JSONDecodeError:
+        print("Failed to parse JSON response")
+        return 0
+
+
 def openai_llm_judge(gold, pred, trace=None):
-    
     print("############## evaluating open ai llm judge ###############")
     print(gold.diagnosis)
     pred_diagnosis = pred.output
@@ -66,6 +95,7 @@ def openai_llm_judge(gold, pred, trace=None):
 
     print("\n")
     response = client.beta.chat.completions.parse(
+        
         model="gpt-4o",
         messages=[
             {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for qiven case history of a patient for a doctor in rural India."},   
@@ -158,3 +188,12 @@ def load_ollama_meditron_70b_url():
 def load_ollama_deepseek_70b_llm_url():
     lm = dspy.LM('ollama_chat/deepseek-r1:70b', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0)
     dspy.configure(lm=lm, top_k=5)
+
+def load_ollama_deepseek_r1_70b_llm_url_non_chat():
+    lm = dspy.LM('ollama_chat/deepseek-r1:70b', api_base='http://localhost:11434', api_key='')
+    dspy.configure(lm=lm, top_k=5)
+
+def load_ollama_deepseek_r1_32b_llm_url_non_chat():
+    lm = dspy.LM('ollama_chat/deepseek-r1:32b', api_base='http://localhost:11434', model_type="chat", api_key='')
+    dspy.configure(lm=lm, top_k=5)
+    # return lm
