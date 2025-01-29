@@ -124,9 +124,25 @@ question = """You are a doctor with the following patient rural India.
         Please remember this is a patient in rural India and use this as a consideration for the diseases likely for the patient."""
 
 
+mul_question = """
+        You are a doctor with the following patient rural India.
+        Here is their case with the history of presenting illness, symptoms, their physical exams, and demographics.
+        What would be the top primary diagnosis for this patient?
+        What would be the additional primary diagnosis for this patient ?
+        Also include other differential diagnosis other than the primary diagnosis found above upto 3.
+        For each diagnosis, include the likelihood score and the rationale for that diagnosis
+        For high to moderate likelihood diagnosis under the rationale mention the clinical relevance and features, any recent infection or preceeding infection, and relevance to rural india.
+        For a low likelihood diagnosis, include lack of fit reasoning under the rationale for that diagnosis.
+        Please rank the differential diagnoses based on the likelihood.
+        If the data provided for the patient is not is not sufficient to make diagnosis, mark both primary diagnosis as "NA" and ask further questions to be asked to make diagnosis more clear.
+        If there was a primary diagnosis found, mark further questions as "NA"
+        Please remember this is a patient in rural India and use this as a consideration for the diseases likely for the patient.
+"""
+
+
 response = requests.post(
     "http://127.0.0.1:8000/predict",
-    json={"question": question, "case": patient_case_1 }
+    json={"question": mul_question, "case": patient_case_1 }
 )
 if response.status_code == 200:
     formatted_json = json.dumps(response.json(), indent=4)

@@ -5,6 +5,7 @@ import dspy
 from utils.metric_utils import load_gemini_lm_prod, load_open_ai_lm, load_gemini_lm
 from dotenv import load_dotenv
 from modules.DDxModule import DDxModule
+from modules.DDxMulModule import DDxMulModule
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -26,8 +27,10 @@ class DDxInfo(BaseModel):
     case: str
     question: str
 
-cot = DDxModule()
-cot.load("outputs/" + "15_01_2025_ddx_gemini2_only_num_trials_20_patient_data_top_k5_NA_diag_questions_nas_trial1.json")
+
+
+cot = DDxMulModule()
+cot.load("outputs/" + "27_01_2025_ddx_gemini2_only_num_trials_20_patient_data_top_k5_NA.json")
 
 dspy_program = dspy.asyncify(cot)
 
