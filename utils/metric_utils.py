@@ -142,6 +142,7 @@ def load_gemini_lm():
 def load_gemini_lm_prod():
     gemini = dspy.Google("models/gemini-1.5-pro", api_key=GEMINI_API_KEY, temperature=0.01)
     dspy.settings.configure(lm=gemini, max_tokens=10000, top_k=5)
+    # dspy.settings.configure(lm=gemini, top_k=5)
 
 def load_gemini2_lm():
     gemini = dspy.Google("models/gemini-2.0-flash-exp", api_key=GEMINI_API_KEY)
@@ -176,12 +177,14 @@ def load_vertex_ai_url_lm():
     dspy.configure(lm=lm)
 
 def load_ollama_openbio_70b_llm_url():
-    lm = dspy.LM('ollama_chat/taozhiyuai/openbiollm-llama-3:70b_q2_k', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0)
+    lm = dspy.LM('ollama_chat/taozhiyuai/openbiollm-llama-3:70b_q2_k', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0, stop=["## completed ##"])
     dspy.configure(lm=lm, top_k=5)
 
 
 def load_ollama_meditron_70b_url():
+    # lm = dspy.LM('ollama_chat/meditron:70b', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0, stop=["## completed ##"])
     lm = dspy.LM('ollama_chat/meditron:70b', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0)
+
     dspy.configure(lm=lm, top_k=5)
 
 
@@ -193,7 +196,8 @@ def load_ollama_deepseek_r1_70b_llm_url_non_chat():
     lm = dspy.LM('ollama_chat/deepseek-r1:70b', api_base='http://localhost:11434', api_key='')
     dspy.configure(lm=lm, top_k=5)
 
+
 def load_ollama_deepseek_r1_32b_llm_url_non_chat():
-    lm = dspy.LM('ollama_chat/deepseek-r1:32b', api_base='http://localhost:11434', model_type="chat", api_key='')
+    lm = dspy.LM('ollama_chat/deepseek-r1:32b', api_base='http://localhost:11434', model_type="chat", api_key='', stop=["## completed ##"])
     dspy.configure(lm=lm, top_k=5)
     # return lm
