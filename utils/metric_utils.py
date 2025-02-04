@@ -188,6 +188,13 @@ def load_ollama_meditron_70b_url():
     dspy.configure(lm=lm, top_k=5)
 
 
+def load_ollama_meditron_7b_url():
+    # lm = dspy.LM('ollama_chat/meditron:70b', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0, stop=["## completed ##"])
+    lm = dspy.LM('ollama_chat/meditron:latest', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0)
+
+    dspy.configure(lm=lm, top_k=5)
+
+
 def load_ollama_deepseek_70b_llm_url():
     lm = dspy.LM('ollama_chat/deepseek-r1:70b', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0)
     dspy.configure(lm=lm, top_k=5)
@@ -201,3 +208,12 @@ def load_ollama_deepseek_r1_32b_llm_url_non_chat():
     lm = dspy.LM('ollama_chat/deepseek-r1:32b', api_base='http://localhost:11434', model_type="chat", api_key='', stop=["## completed ##"])
     dspy.configure(lm=lm, top_k=5)
     # return lm
+
+
+def load_openAI_direct_client():    # Initialize OpenAI client that points to the local LM Studio server
+    client = OpenAI(
+        base_url="http://localhost:1234/v1",
+        api_key="lm-studio",
+    )
+
+    return client
