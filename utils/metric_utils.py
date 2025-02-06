@@ -96,7 +96,7 @@ def openai_llm_judge(gold, pred, trace=None):
     print("\n")
     response = client.beta.chat.completions.parse(
         
-        model="gpt-4o",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for qiven case history of a patient for a doctor in rural India."},   
             {"role": "user", "content": f"Expected output: " + gold.diagnosis},
@@ -182,14 +182,12 @@ def load_ollama_openbio_70b_llm_url():
 
 
 def load_ollama_meditron_70b_url():
-    # lm = dspy.LM('ollama_chat/meditron:70b', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0, stop=["## completed ##"])
     lm = dspy.LM('ollama_chat/meditron:70b', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0)
 
     dspy.configure(lm=lm, top_k=5)
 
 
 def load_ollama_meditron_7b_url():
-    # lm = dspy.LM('ollama_chat/meditron:70b', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0, stop=["## completed ##"])
     lm = dspy.LM('ollama_chat/meditron:latest', api_base='http://localhost:11434', api_key='', model_type="chat", temperature=1.0)
 
     dspy.configure(lm=lm, top_k=5)
@@ -217,3 +215,8 @@ def load_openAI_direct_client():    # Initialize OpenAI client that points to th
     )
 
     return client
+
+
+def load_lm_studio_medllama3_v20_url():
+    lm = dspy.LM('lm_studio/probemedicalyonseimailab-medllama3-v20', api_base='http://localhost:1234/v1', api_key='', model_type="chat", temperature=1.0)
+    dspy.configure(lm=lm, top_k=5)
