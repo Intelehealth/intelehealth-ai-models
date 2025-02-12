@@ -111,38 +111,25 @@ patient_case_1 = """
   Sugar_after_meal: Null"
 """
 
-question = """You are a doctor with the following patient rural India.
+test_case_1 = """Gender: Male
+
+  Age: 25 years
+  """
+
+single_diagnosis_prompt = """You are a doctor with the following patient rural India.
         Here is their case with the history of presenting illness, their physical exams, and demographics.
-        If there is no sufficient data to diagnose a patient from a case history of the patient provided, please mark the diagnosis as NA and output list of questions for the patient to make it easier to the doctor to make further progress. Do not include questions that are not pertinent to the provided case history.
-        Otherwise, if there is sufficient data provide the below:
+        If there is no sufficient data to diagnose a patient from a case history of the patient provided, please return the diagnosis as NA.
+        Otherwise, if provided data is sufficient follow the below instructions.
         What would be the top 5 differential diagnosis for this patient?
-        For each diagnosis, include the likelihood score and the rationale for that diagnosis
+        For each diagnosis, include the likelihood score and the brief rationale for that diagnosis
         For high to moderate likelihood diagnosis under the rationale mention the clinical relevance and features, any recent infection or preceeding infection, and relevance to rural india.
         For a low likelihood diagnosis, include lack of fit reasoning under the rationale for that diagnosis.
         Please rank the differential diagnoses based on the likelihood and provide a detailed explanation for each diagnosis.
-        If the case history data provided was sufficient to make diagnosis of a patient, leave further questions as empty string.
         Please remember this is a patient in rural India and use this as a consideration for the diseases likely for the patient."""
-
-
-mul_question = """
-        You are a doctor with the following patient rural India.
-        Here is their case with the history of presenting illness, symptoms, their physical exams, and demographics.
-        What would be the top primary diagnosis for this patient?
-        What would be the additional primary diagnosis for this patient ?
-        Also include other differential diagnosis other than the primary diagnosis found above upto 3.
-        For each diagnosis, include the likelihood score and the rationale for that diagnosis
-        For high to moderate likelihood diagnosis under the rationale mention the clinical relevance and features, any recent infection or preceeding infection, and relevance to rural india.
-        For a low likelihood diagnosis, include lack of fit reasoning under the rationale for that diagnosis.
-        Please rank the differential diagnoses based on the likelihood.
-        If the data provided for the patient is not is not sufficient to make diagnosis, mark both primary diagnosis as "NA" and ask further questions to be asked to make diagnosis more clear.
-        If there was a primary diagnosis found, mark further questions as "NA"
-        Please remember this is a patient in rural India and use this as a consideration for the diseases likely for the patient.
-"""
-
 
 response = requests.post(
     "http://127.0.0.1:8000/predict",
-    json={"question": mul_question, "case": patient_case_1 }
+    json={"question": single_diagnosis_prompt, "case": patient_case }
 )
 if response.status_code == 200:
     formatted_json = json.dumps(response.json(), indent=4)
