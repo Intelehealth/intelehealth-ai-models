@@ -2,7 +2,7 @@ import dspy
 import time
 
 import dspy
-from utils.metric_utils import load_gemini_lm_prod, load_open_ai_lm, load_gemini_lm
+from utils.metric_utils import load_gemini_lm_prod, load_open_ai_lm, load_gemini_lm, load_gemini2_lm
 from dotenv import load_dotenv
 from modules.DDxModule import DDxModule
 from modules.DDxMulModule import DDxMulModule
@@ -15,7 +15,7 @@ load_dotenv(
     "ops/.env"
 )
 
-load_gemini_lm_prod()
+load_gemini2_lm()
 
 app = FastAPI(
     title="Differential Diagnosis Server",
@@ -29,8 +29,8 @@ class DDxInfo(BaseModel):
 
 
 
-cot = DDxMulModule()
-cot.load("outputs/" + "27_01_2025_ddx_gemini2_only_num_trials_20_patient_data_top_k5_NA.json")
+cot = DDxModule()
+cot.load("outputs/" + "10_02_2025_ddx_gemini2_only_num_trials_20_ayu_data_top_k5_single_diagnosis.json")
 
 dspy_program = dspy.asyncify(cot)
 
@@ -38,6 +38,14 @@ dspy_program = dspy.asyncify(cot)
 async def ddx(request_body: DDxInfo):
     try:
         result = await dspy_program(case=request_body.case,question=request_body.question)
+        print(result)
+        if result.output.diagnosis == "NA":
+            print("no diagnosis possible")
+            return {
+                "status": "success",
+                "data": "The Input provided does not have enough clinical details for AI based assessment."
+            }
+
         return {
             "status": "success",
             "data": result.toDict()

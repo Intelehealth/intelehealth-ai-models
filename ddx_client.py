@@ -129,7 +129,7 @@ single_diagnosis_prompt = """You are a doctor with the following patient rural I
 
 response = requests.post(
     "http://127.0.0.1:8000/predict",
-    json={"question": single_diagnosis_prompt, "case": patient_case }
+    json={"question": single_diagnosis_prompt, "case": patient_case_1 }
 )
 if response.status_code == 200:
     formatted_json = json.dumps(response.json(), indent=4)
