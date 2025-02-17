@@ -116,21 +116,12 @@ test_case_1 = """Gender: Male
   Age: 25 years
   """
 
-single_diagnosis_prompt = """You are a doctor with the following patient rural India.
-        Here is their case with the history of presenting illness, their physical exams, and demographics.
-        If there is no sufficient data to diagnose a patient from a case history of the patient provided, please return the diagnosis as NA.
-        Otherwise, if provided data is sufficient follow the below instructions.
-        What would be the top 5 differential diagnosis for this patient?
-        For each diagnosis, include the likelihood score and the brief rationale for that diagnosis
-        For high to moderate likelihood diagnosis under the rationale mention the clinical relevance and features, any recent infection or preceeding infection, and relevance to rural india.
-        For a low likelihood diagnosis, include lack of fit reasoning under the rationale for that diagnosis.
-        Please rank the differential diagnoses based on the likelihood and provide a detailed explanation for each diagnosis.
-        Please remember this is a patient in rural India and use this as a consideration for the diseases likely for the patient."""
 
 response = requests.post(
     "http://127.0.0.1:8000/predict",
-    json={"question": single_diagnosis_prompt, "case": patient_case_1 }
+    json={"model_name": "gemini-2.0-flash", "case": patient_case_1, "prompt_version": 1 }
 )
+
 if response.status_code == 200:
     formatted_json = json.dumps(response.json(), indent=4)
     print(formatted_json)

@@ -9,6 +9,7 @@ from modules.DDxMulModule import DDxMulModule
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from prompt_config import prompt_config
 
 
 load_dotenv(
@@ -25,19 +26,33 @@ app = FastAPI(
 
 class DDxInfo(BaseModel):
     case: str
-    question: str
-
-
+    model_name: str
+    prompt_version: int
 
 cot = DDxModule()
-cot.load("outputs/" + "10_02_2025_ddx_gemini2_only_num_trials_20_ayu_data_top_k5_single_diagnosis.json")
-
-dspy_program = dspy.asyncify(cot)
 
 @app.post("/predict")
 async def ddx(request_body: DDxInfo):
+    prompt = ""
+    if request_body.model_name == "gemini-2.0-flash":
+        if request_body.prompt_version == 1:
+            cot.load("outputs/" + "10_02_2025_ddx_gemini2_only_num_trials_20_ayu_data_top_k5_single_diagnosis.json")
+            prompt = prompt_config[1]
+        else:
+            return {
+                "status": "error",
+                "message": "Invalid prompt version"
+            }
+    else:
+        return {
+            "status": "error",
+            "message": "Invalid model name"
+        }
+
+    dspy_program = dspy.asyncify(cot)
+
     try:
-        result = await dspy_program(case=request_body.case,question=request_body.question)
+        result = await dspy_program(case=request_body.case, question=prompt)
         print(result)
         if result.output.diagnosis == "NA":
             print("no diagnosis possible")
@@ -52,6 +67,10 @@ async def ddx(request_body: DDxInfo):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "status": "error",
+            "message": "Internal Server Error. Please try again later."
+        }
     
 
 @app.get("/health-status")
