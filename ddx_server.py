@@ -66,7 +66,7 @@ async def ddx(request_body: DDxInfo):
             "data": result.toDict()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(e)
         return {
             "status": "error",
             "message": "Internal Server Error. Please try again later."
