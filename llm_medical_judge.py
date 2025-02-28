@@ -53,7 +53,7 @@ def evaluate_diagnoses(input_csv: str, output_csv: str):
     Evaluate medical equivalence for diagnoses in the input CSV file.
     """
     # Read the first 5 rows of the CSV file for testing
-    df = pd.read_csv(input_csv, nrows=5)
+    df = pd.read_csv(input_csv, nrows=50)
     
     # Print the relevant columns for the first 5 rows
     print("\nFirst 5 rows of the CSV:")
@@ -63,10 +63,11 @@ def evaluate_diagnoses(input_csv: str, output_csv: str):
     # Initialize new columns
     df['Top 1 ddx hit'] = 0
     df['Top 5 ddx hit'] = 0  # This will store the position (1-5) where a match is found
+    df['Match Position'] = 0  # New column to store the position where match was found
     df['gpt4_explanation'] = ''
     
     # Process each row
-    for idx in tqdm(df.index, desc="Evaluating diagnoses (first 5 rows)"):
+    for idx in tqdm(df.index, desc="Evaluating diagnoses"):
         print(f"\nRow {idx+1}:")
         print(f"Ground Truth: {df.at[idx, 'Diagnosis']}")
         print(f"LLM Diagnosis: {df.at[idx, 'LLM Diagnosis']}")
@@ -84,20 +85,25 @@ def evaluate_diagnoses(input_csv: str, output_csv: str):
         
         # Check each position from 1 to 5
         match_position = 0  # 0 means no match found
+        explanations = []  # Store all explanations
         
         # Check each position
         for position, diagnosis in enumerate(llm_diagnoses, start=1):
             print(f"Checking position {position}: {diagnosis}")
             is_equivalent, explanation = get_gpt4_judgment(gt_diagnoses, diagnosis)
+            explanations.append(f"Position {position}: {explanation}")  # Add position number to explanation
             
             if is_equivalent:
                 match_position = position
+                df.at[idx, 'Match Position'] = position  # Store the match position
                 if position == 1:
                     df.at[idx, 'Top 1 ddx hit'] = 1
-                break
-        
+                
         # Store the position where a match was found (0 if no match)
         df.at[idx, 'Top 5 ddx hit'] = match_position
+        
+        # Combine all explanations with newlines
+        df.at[idx, 'gpt4_explanation'] = '\n'.join(explanations)
         
         print(f"Result: Top 1 hit = {df.at[idx, 'Top 1 ddx hit']}, Top 5 hit position = {match_position}")
         print("-" * 50)  # Add separator line after each row's processing
@@ -106,22 +112,30 @@ def evaluate_diagnoses(input_csv: str, output_csv: str):
         if idx % 10 == 0:
             df.to_csv(output_csv, index=False)
             
-    # Save final results
+    # Save final results with position information
     df.to_csv(output_csv, index=False)
     
     # Calculate and print metrics
     top1_accuracy = df['Top 1 ddx hit'].mean() * 100
     top5_accuracy = (df['Top 5 ddx hit'] > 0).mean() * 100  # Any non-zero value means a match was found in top 5
     
+    # Calculate position distribution
+    position_counts = df['Match Position'].value_counts().sort_index()
+    
     print("\nResults:")
     print("-" * 50)  # Add separator line before final results
     print(f"Top-1 Accuracy: {top1_accuracy:.2f}%")
     print(f"Top-5 Accuracy: {top5_accuracy:.2f}%")
+    print("\nMatch Position Distribution:")
+    for position, count in position_counts.items():
+        if position > 0:  # Skip position 0 (no match)
+            percentage = (count / len(df)) * 100
+            print(f"Position {position}: {count} matches ({percentage:.2f}%)")
     print("-" * 50)  # Add separator line after final results
 
 if __name__ == "__main__":
     input_file = "data/v2_results/gemini_2_flash_nas_combined_ayu_inference_final.csv"
-    output_file = "data/v2_results/gemini_2_flash_nas_combined_ayu_inference_evaluated.csv"
+    output_file = "data/v2_results/gemini_2_flash_nas_combined_ayu_inference_evaluated_1_50.csv"
     
     if not os.getenv("OPENAI_API_KEY"):
         print("Please set the OPENAI_API_KEY environment variable")
