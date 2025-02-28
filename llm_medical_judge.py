@@ -52,8 +52,10 @@ def evaluate_diagnoses(input_csv: str, output_csv: str):
     """
     Evaluate medical equivalence for diagnoses in the input CSV file.
     """
+    # Read rows 50-100 of the CSV file
+    df = pd.read_csv(input_csv, skiprows=range(1,50), nrows=50)
     # Read the first 5 rows of the CSV file for testing
-    df = pd.read_csv(input_csv, nrows=50)
+    # df = pd.read_csv(input_csv, nrows=50)
     
     # Print the relevant columns for the first 5 rows
     print("\nFirst 5 rows of the CSV:")
@@ -72,41 +74,64 @@ def evaluate_diagnoses(input_csv: str, output_csv: str):
         print(f"Ground Truth: {df.at[idx, 'Diagnosis']}")
         print(f"LLM Diagnosis: {df.at[idx, 'LLM Diagnosis']}")
         
+        # Check if LLM Diagnosis is empty or NaN
+        if pd.isna(df.at[idx, 'LLM Diagnosis']) or str(df.at[idx, 'LLM Diagnosis']).strip() == '':
+            print("Empty or NaN LLM Diagnosis - skipping row")
+            df.at[idx, 'gpt4_explanation'] = "Empty or NaN LLM Diagnosis"
+            print("-" * 50)
+            continue
+            
         gt_diagnoses = [d.strip() for d in str(df.at[idx, 'Diagnosis']).split(',')]
         
         # Parse the numbered list from LLM Diagnosis
         llm_diagnoses = []
-        for line in df.at[idx, 'LLM Diagnosis'].split('\n'):
-            line = line.strip()
-            if line and any(line.startswith(f"{i}.") for i in range(1, 6)):
-                # Extract the diagnosis after the number
-                diagnosis = line.split('.', 1)[1].strip()
-                llm_diagnoses.append(diagnosis)
-        
-        # Check each position from 1 to 5
-        match_position = 0  # 0 means no match found
-        explanations = []  # Store all explanations
-        
-        # Check each position
-        for position, diagnosis in enumerate(llm_diagnoses, start=1):
-            print(f"Checking position {position}: {diagnosis}")
-            is_equivalent, explanation = get_gpt4_judgment(gt_diagnoses, diagnosis)
-            explanations.append(f"Position {position}: {explanation}")  # Add position number to explanation
+        try:
+            for line in str(df.at[idx, 'LLM Diagnosis']).split('\n'):
+                line = line.strip()
+                if line and any(line.startswith(f"{i}.") for i in range(1, 6)):
+                    # Extract the diagnosis after the number
+                    diagnosis = line.split('.', 1)[1].strip()
+                    llm_diagnoses.append(diagnosis)
             
-            if is_equivalent:
-                match_position = position
-                df.at[idx, 'Match Position'] = position  # Store the match position
-                if position == 1:
-                    df.at[idx, 'Top 1 ddx hit'] = 1
+            # If no valid diagnoses found, skip this row
+            if not llm_diagnoses:
+                print("No valid numbered diagnoses found - skipping row")
+                df.at[idx, 'gpt4_explanation'] = "No valid numbered diagnoses found"
+                print("-" * 50)
+                continue
                 
-        # Store the position where a match was found (0 if no match)
-        df.at[idx, 'Top 5 ddx hit'] = match_position
-        
-        # Combine all explanations with newlines
-        df.at[idx, 'gpt4_explanation'] = '\n'.join(explanations)
-        
-        print(f"Result: Top 1 hit = {df.at[idx, 'Top 1 ddx hit']}, Top 5 hit position = {match_position}")
-        print("-" * 50)  # Add separator line after each row's processing
+            # Check each position from 1 to 5
+            match_position = 0  # 0 means no match found
+            explanations = []  # Store all explanations
+            found_match = False
+            
+            # Check each position
+            for position, diagnosis in enumerate(llm_diagnoses, start=1):
+                print(f"Checking position {position}: {diagnosis}")
+                is_equivalent, explanation = get_gpt4_judgment(gt_diagnoses, diagnosis)
+                explanations.append(f"Position {position}: {explanation}")  # Add position number to explanation
+                
+                if is_equivalent and not found_match:  # Only update match position for the first match
+                    match_position = position
+                    df.at[idx, 'Match Position'] = position
+                    if position == 1:
+                        df.at[idx, 'Top 1 ddx hit'] = 1
+                    found_match = True
+                    
+            # Store the position where the first match was found (0 if no match)
+            df.at[idx, 'Top 5 ddx hit'] = match_position
+            
+            # Combine all explanations with newlines
+            df.at[idx, 'gpt4_explanation'] = '\n'.join(explanations)
+            
+            print(f"Result: Top 1 hit = {df.at[idx, 'Top 1 ddx hit']}, Top 5 hit position = {match_position}")
+            print("-" * 50)  # Add separator line after each row's processing
+            
+        except Exception as e:
+            print(f"Error processing row: {e}")
+            df.at[idx, 'gpt4_explanation'] = f"Error processing row: {str(e)}"
+            print("-" * 50)
+            continue
         
         # Save progress periodically
         if idx % 10 == 0:
@@ -135,7 +160,7 @@ def evaluate_diagnoses(input_csv: str, output_csv: str):
 
 if __name__ == "__main__":
     input_file = "data/v2_results/gemini_2_flash_nas_combined_ayu_inference_final.csv"
-    output_file = "data/v2_results/gemini_2_flash_nas_combined_ayu_inference_evaluated_1_50.csv"
+    output_file = "data/v2_results/gemini_2_flash_nas_combined_ayu_inference_evaluated_50_100.csv"
     
     if not os.getenv("OPENAI_API_KEY"):
         print("Please set the OPENAI_API_KEY environment variable")
