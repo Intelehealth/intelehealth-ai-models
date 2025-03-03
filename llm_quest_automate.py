@@ -3,12 +3,63 @@ from openai import OpenAI
 import json
 import pandas as pd
 from tqdm import tqdm
+import google.generativeai as genai
+import argparse
 
 # Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def evaluate_llm_output(patient_history: str, ground_truth_diagnosis: str, llm_differential: list, llm_rationale: str) -> dict:
-    """Evaluate a single row of LLM output using GPT-4"""
+# Initialize Gemini client if API key is available
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+if gemini_api_key:
+    genai.configure(api_key=gemini_api_key)
+
+def evaluate_with_openai(prompt: str) -> dict:
+    """Evaluate using OpenAI's GPT-4 model"""
+    try:
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a medical expert evaluator."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            max_tokens=2500
+        )
+
+        evaluation_result = response.choices[0].message.content.strip()
+        evaluation_json = json.loads(evaluation_result)
+        return evaluation_json
+    except Exception as e:
+        print(f"Error in OpenAI evaluation: {str(e)}")
+        return None
+
+def evaluate_with_gemini(prompt: str) -> dict:
+    """Evaluate using Google's Gemini 2.0 Flash model"""
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        
+        # Extract the JSON part from the response
+        evaluation_result = response.text.strip()
+        
+        # Try to find JSON in the response
+        json_start = evaluation_result.find('{')
+        json_end = evaluation_result.rfind('}') + 1
+        
+        if json_start >= 0 and json_end > json_start:
+            json_str = evaluation_result[json_start:json_end]
+            evaluation_json = json.loads(json_str)
+            return evaluation_json
+        else:
+            print("No valid JSON found in Gemini response")
+            return None
+    except Exception as e:
+        print(f"Error in Gemini evaluation: {str(e)}")
+        return None
+
+def evaluate_llm_output(patient_history: str, ground_truth_diagnosis: str, llm_differential: list, llm_rationale: str, judge_model: str = "openai") -> dict:
+    """Evaluate a single row of LLM output using the specified judge model"""
     
     evaluation_prompt = f"""You are an expert medical evaluator tasked with judging an LLM's rationale for a differential diagnosis. You will score the LLM's output based on the following metrics:
 
@@ -47,25 +98,13 @@ Provide your evaluation as a JSON object with the following structure:
     "gender_discrimination": {{"score": 0.0, "explanation": ""}}
 }}"""
 
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a medical expert evaluator."},
-                {"role": "user", "content": evaluation_prompt}
-            ],
-            temperature=0.2,
-            max_tokens=2500
-        )
+    # Choose the appropriate judge model
+    if judge_model.lower() == "gemini" and gemini_api_key:
+        return evaluate_with_gemini(evaluation_prompt)
+    else:
+        return evaluate_with_openai(evaluation_prompt)
 
-        evaluation_result = response.choices[0].message.content.strip()
-        evaluation_json = json.loads(evaluation_result)
-        return evaluation_json
-    except Exception as e:
-        print(f"Error in evaluation: {str(e)}")
-        return None
-
-def process_csv(input_file: str, output_file: str, nrows: int = 5):
+def process_csv(input_file: str, output_file: str, judge_model: str = "openai", nrows: int = 5):
     """Process the input CSV and add evaluation scores"""
     
     # Read the CSV file
@@ -85,14 +124,15 @@ def process_csv(input_file: str, output_file: str, nrows: int = 5):
         'specificity_score', 'specificity_explanation',
         'bias_score', 'bias_explanation',
         'gender_discrimination_score', 'gender_discrimination_explanation',
-        'composite_score'
+        'composite_score',
+        'judge_model'
     ]
     
     for col in score_columns:
         df[col] = None
     
     # Process each row
-    for idx in tqdm(df.index, desc="Evaluating rows"):
+    for idx in tqdm(df.index, desc=f"Evaluating rows with {judge_model}"):
         # Extract the required information
         patient_history = df.at[idx, 'Clinical Notes']
         ground_truth = df.at[idx, 'Diagnosis']
@@ -108,7 +148,7 @@ def process_csv(input_file: str, output_file: str, nrows: int = 5):
         llm_rationale = df.at[idx, 'Rationale'] if pd.notna(df.at[idx, 'Rationale']) else ""
         
         # Get evaluation
-        evaluation = evaluate_llm_output(patient_history, ground_truth, llm_differential, llm_rationale)
+        evaluation = evaluate_llm_output(patient_history, ground_truth, llm_differential, llm_rationale, judge_model)
         
         if evaluation:
             # Store scores and explanations
@@ -119,17 +159,31 @@ def process_csv(input_file: str, output_file: str, nrows: int = 5):
             # Calculate and store composite score
             scores = [evaluation[metric]["score"] for metric in evaluation]
             df.at[idx, 'composite_score'] = sum(scores) / len(scores)
+            df.at[idx, 'judge_model'] = judge_model
     
     # Save the results
     df.to_csv(output_file, index=False)
     print(f"Results saved to {output_file}")
 
 if __name__ == "__main__":
-    input_file = "data/v2_results/gemini_2_flash_nas_combined_ayu_inference_final.csv"
-    output_file = "data/v2_results/gemini_2_flash_nas_combined_ayu_inference_evaluated_with_enhanced_scores.csv"
+    parser = argparse.ArgumentParser(description='Evaluate LLM medical diagnoses')
+    parser.add_argument('--input', type=str, default="data/v2_results/gemini_2_flash_nas_combined_ayu_inference_final.csv",
+                        help='Input CSV file path')
+    parser.add_argument('--output', type=str, default="data/v2_results/gemini_2_flash_nas_combined_ayu_inference_evaluated_with_enhanced_scores.csv",
+                        help='Output CSV file path')
+    parser.add_argument('--judge', type=str, choices=['openai', 'gemini'], default='openai',
+                        help='LLM judge to use for evaluation (openai or gemini)')
+    parser.add_argument('--rows', type=int, default=5,
+                        help='Number of rows to process')
     
-    if not os.getenv("OPENAI_API_KEY"):
+    args = parser.parse_args()
+    
+    # Check for required API keys
+    if args.judge == 'openai' and not os.getenv("OPENAI_API_KEY"):
         print("Please set the OPENAI_API_KEY environment variable")
         exit(1)
+    elif args.judge == 'gemini' and not os.getenv("GEMINI_API_KEY"):
+        print("Please set the GEMINI_API_KEY environment variable")
+        exit(1)
     
-    process_csv(input_file, output_file)
+    process_csv(args.input, args.output, args.judge, args.rows)
