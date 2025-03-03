@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uvicorn
 from typing import Dict, Optional, List, Any
 import os
@@ -25,45 +25,142 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 # Create FastAPI app
 app = FastAPI(
     title="Patient Story Generator API",
-    description="API for generating patient stories using templates and patient data",
-    version="1.0.0"
+    description="""
+    API for generating patient stories using templates and patient data.
+    
+    This API allows you to:
+    - List available templates and patients
+    - Generate patient stories based on templates and patient data
+    - Retrieve detailed patient visit information
+    
+    All stories are generated using real patient data without hallucination or fabrication.
+    """,
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
 
 # Define models
 class StoryRequest(BaseModel):
-    template_id: int
-    patient_id: str
-    additional_context: Optional[Dict] = None
+    template_id: int = Field(..., description="ID of the template to use for story generation", example=1)
+    patient_id: str = Field(..., description="ID of the patient to generate story for", example="P001")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "template_id": 1,
+                "patient_id": "P001"
+            }
+        }
 
 class StoryResponse(BaseModel):
-    patient_id: str
-    template_id: int
-    story: str
-    metadata: Dict
+    patient_id: str = Field(..., description="ID of the patient")
+    template_id: int = Field(..., description="ID of the template used")
+    story: str = Field(..., description="Generated patient story")
+    metadata: Dict = Field(..., description="Additional metadata about the story generation")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "patient_id": "P001",
+                "template_id": 1,
+                "story": "This is John Doe, a 45-year-old male from New York, who can be reached at (555) 123-4567. He has visited our facility 3 times.\n\nVisit 1 (2022-01-15): He presented with fever and cough. Diagnosed with acute bronchitis. Treatment: Prescribed antibiotics and rest.\nVisit 2 (2022-03-20): He presented with joint pain. Diagnosed with early arthritis. Treatment: Anti-inflammatory medication and physical therapy.\nVisit 3 (2022-07-10): He presented with follow-up for arthritis. Diagnosed with improving condition. Treatment: Continued medication with reduced dosage.\n\nCurrent Status: John is scheduled for a follow-up visit on 2023-12-15.",
+                "metadata": {
+                    "template_name": "Default",
+                    "template_description": "Standard patient story template with basic information and all visits",
+                    "visit_count": 3,
+                    "data_sources": ["basic_patient_data", "past_patients_visit.py"]
+                }
+            }
+        }
 
 class TemplateInfo(BaseModel):
-    id: int
-    name: str
-    description: str
-    template: str
+    id: int = Field(..., description="Template ID")
+    name: str = Field(..., description="Template name")
+    description: str = Field(..., description="Template description")
+    template: str = Field(..., description="Template string")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "id": 1,
+                "name": "Default",
+                "description": "Standard patient story template with basic information and all visits",
+                "template": "...."
+            }
+        }
 
 class PatientVisit(BaseModel):
-    visit_number: int
-    visit_date: Optional[str] = None
-    complaints: Optional[str] = None
-    diagnosis: Optional[str] = None
-    treatment: Optional[str] = None
-    vitals: Optional[Dict] = None
-    additional_info: Optional[Dict] = None
+    visit_number: int = Field(..., description="Visit number")
+    visit_date: Optional[str] = Field(None, description="Date of the visit")
+    complaints: Optional[str] = Field(None, description="Chief complaints during the visit")
+    diagnosis: Optional[str] = Field(None, description="Diagnosis made during the visit")
+    treatment: Optional[str] = Field(None, description="Treatment prescribed during the visit")
+    vitals: Optional[Dict] = Field(None, description="Vital signs recorded during the visit")
+    additional_info: Optional[Dict] = Field(None, description="Additional information recorded during the visit")
 
 class PatientInfo(BaseModel):
-    patient_id: str
-    name: Optional[str] = None
-    age: Optional[int] = None
-    gender: Optional[str] = None
-    location: Optional[str] = None
-    contact: Optional[str] = None
-    visits: List[PatientVisit] = []
+    patient_id: str = Field(..., description="Patient ID")
+    name: Optional[str] = Field(None, description="Patient name")
+    age: Optional[int] = Field(None, description="Patient age")
+    gender: Optional[str] = Field(None, description="Patient gender")
+    location: Optional[str] = Field(None, description="Patient location")
+    contact: Optional[str] = Field(None, description="Patient contact information")
+    visits: List[PatientVisit] = Field([], description="List of patient visits")
+
+class PatientVisitsResponse(BaseModel):
+    patient_id: str = Field(..., description="Patient ID")
+    basic_info: Dict = Field(..., description="Basic patient information")
+    visits: Dict = Field(..., description="Patient visit data")
+    visit_count: int = Field(..., description="Number of visits")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "patient_id": "P001",
+                "basic_info": {
+                    "name": "John Doe",
+                    "age": 45,
+                    "gender": "Male",
+                    "location": "New York",
+                    "contact": "(555) 123-4567"
+                },
+                "visits": {
+                    "1": {
+                        "Visit_Date": "2022-01-15",
+                        "Chief_Complaints": "Fever and cough",
+                        "Diagnosis": "Acute bronchitis",
+                        "Treatment": "Prescribed antibiotics and rest"
+                    },
+                    "2": {
+                        "Visit_Date": "2022-03-20",
+                        "Chief_Complaints": "Joint pain",
+                        "Diagnosis": "Early arthritis",
+                        "Treatment": "Anti-inflammatory medication and physical therapy"
+                    },
+                    "3": {
+                        "Visit_Date": "2022-07-10",
+                        "Chief_Complaints": "Follow-up for arthritis",
+                        "Diagnosis": "Improving condition",
+                        "Treatment": "Continued medication with reduced dosage"
+                    }
+                },
+                "visit_count": 3
+            }
+        }
+
+class HealthResponse(BaseModel):
+    status: str = Field(..., description="API health status")
+    templates_available: int = Field(..., description="Number of available templates")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "status": "healthy",
+                "templates_available": 3
+            }
+        }
 
 # Template storage - in a real app, this would be in a database
 template_1 = "This is ABC 👩🏽, a 27-year-old from Nasik, Maharashtra🇮🇳, living at 444, Kathe Lane. She was born on August 6, 1997🎂, and can be reached at 9876543210. Muskan first visited us a few months ago with complaints of recurring headaches and fatigue, which we traced to stress and mild anemia. On her second visit, she reported dizziness and nausea, so we adjusted her treatment with a nutritional plan and supplements."
@@ -224,7 +321,7 @@ async def generate_story(template: str, patient_data: Dict) -> str:
         
         {patient_data}
         
-        Please generate a  story matching the template {template} to make it more natural and readable for the doctor. 
+        Please generate a story matching the template {template} to make it more natural and readable for the doctor. 
         
         Fill in any missing placeholders 
         with plausible information based ONLY on the data provided. 
@@ -256,7 +353,13 @@ async def get_patient_data():
     return data
 
 # Endpoints
-@app.get("/templates", response_model=List[TemplateInfo])
+@app.get("/templates", response_model=List[TemplateInfo], 
+         summary="List all templates",
+         description="Returns a list of all available templates with their IDs, names, descriptions, and template strings.",
+         responses={
+             200: {"description": "List of available templates", "model": List[TemplateInfo]},
+             500: {"description": "Internal server error"}
+         })
 async def list_templates():
     """List all available templates with their IDs and descriptions"""
     return [
@@ -269,12 +372,25 @@ async def list_templates():
         for template_id, template_data in templates.items()
     ]
 
-@app.get("/patients", response_model=List[str])
+@app.get("/patients", response_model=List[str], 
+         summary="List all patients",
+         description="Returns a list of all available patient IDs.",
+         responses={
+             200: {"description": "List of available patient IDs"},
+             500: {"description": "Internal server error"}
+         })
 async def list_patients(patient_data: Dict = Depends(get_patient_data)):
     """List all available patient IDs"""
     return list(patient_data.keys())
 
-@app.post("/generate-story", response_model=StoryResponse)
+@app.post("/generate-story", response_model=StoryResponse, 
+          summary="Generate a patient story",
+          description="Generates a patient story using the specified template and patient data. The story includes information from all patient visits without hallucination.",
+          responses={
+              200: {"description": "Successfully generated story", "model": StoryResponse},
+              404: {"description": "Template ID or Patient ID not found"},
+              500: {"description": "Error retrieving patient data or generating story"}
+          })
 async def create_story(
     request: StoryRequest
 ):
@@ -296,10 +412,6 @@ async def create_story(
     template_data = templates[request.template_id]
     template = template_data["template"]
     
-    # Add additional context if provided
-    if request.additional_context:
-        patient_info.update(request.additional_context)
-    
     # Generate story
     story = await generate_story(template, patient_info)
     
@@ -316,7 +428,13 @@ async def create_story(
         }
     )
 
-@app.get("/template/{template_id}", response_model=TemplateInfo)
+@app.get("/template/{template_id}", response_model=TemplateInfo, 
+         summary="Get template details",
+         description="Returns details for a specific template by ID.",
+         responses={
+             200: {"description": "Template details", "model": TemplateInfo},
+             404: {"description": "Template ID not found"}
+         })
 async def get_template(template_id: int):
     """Get details for a specific template"""
     if template_id not in templates:
@@ -330,26 +448,48 @@ async def get_template(template_id: int):
         template=template_data["template"]
     )
 
-@app.get("/patient/{patient_id}/visits")
+@app.get("/patient/{patient_id}/visits", response_model=PatientVisitsResponse, 
+         summary="Get patient visits",
+         description="Returns all visits for a specific patient, combining data from both the local CSV and past_patients_visit.py.",
+         responses={
+             200: {"description": "Patient visit data", "model": PatientVisitsResponse},
+             404: {"description": "Patient ID not found"},
+             500: {"description": "Error retrieving patient visits"}
+         })
 async def get_patient_visits_endpoint(patient_id: str):
     """Get all visits for a specific patient"""
     try:
         patient_info = await get_comprehensive_patient_data(patient_id)
-        return {
-            "patient_id": patient_id,
-            "basic_info": {k: v for k, v in patient_info.items() if k not in ['visits', 'visit_data']},
-            "visits": patient_info.get('visit_data', {}),
-            "visit_count": patient_info.get('visit_count', 0)
-        }
+        return PatientVisitsResponse(
+            patient_id=patient_id,
+            basic_info={k: v for k, v in patient_info.items() if k not in ['visits', 'visit_data']},
+            visits=patient_info.get('visit_data', {}),
+            visit_count=patient_info.get('visit_count', 0)
+        )
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving patient visits: {str(e)}")
 
-@app.get("/health")
+@app.get("/health", response_model=HealthResponse, 
+         summary="Health check",
+         description="Returns the health status of the API.",
+         responses={
+             200: {"description": "API is healthy", "model": HealthResponse}
+         })
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "templates_available": len(templates)}
+    return HealthResponse(
+        status="healthy", 
+        templates_available=len(templates)
+    )
+
+# API Documentation
+@app.get("/", include_in_schema=False)
+async def root():
+    """Redirect to API documentation"""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/docs")
 
 if __name__ == "__main__":
     uvicorn.run("patient_story_api:app", host="0.0.0.0", port=8000, reload=True) 
