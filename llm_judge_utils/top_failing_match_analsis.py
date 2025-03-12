@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Read the CSV file
-file_path = 'merged_llm_concordance_results.csv'
+file_path = '../merged_llm_concordance_results_converted.csv'
 df = pd.read_csv(file_path)
 
 # Filter out rows where GT diagnosis doesn't match history
@@ -18,13 +18,16 @@ df = df[
 df['Top 1 ddx hit'] = pd.to_numeric(df['Top 1 ddx hit'], errors='coerce')
 
 # Filter for failing diagnoses (Top 1 ddx hit == 0)
-failing_df = df[df['Top 1 ddx hit'] == 0]
+# Convert Top 5 ddx hit column to numeric, coercing errors to NaN
+df['Top 5 ddx hit'] = pd.to_numeric(df['Top 5 ddx hit'], errors='coerce')
+# Filter for failing diagnoses (Top 1 ddx hit == 0 OR Top 5 ddx hit == 0)
+failing_df = df[(df['Top 1 ddx hit'] == 0) & (df['Top 5 ddx hit'] == 0)]
 
 # Count occurrences of each unique diagnosis
 diagnosis_counts = failing_df['Diagnosis'].value_counts()
 
-# Print the counts of each failing diagnosis
-print("\nFailing Diagnoses (Top 1 ddx hit == 0) Counts:")
+# Print the counts of each unique diagnosis
+print("\nFailing Diagnoses (Top 1 ddx hit == 0 AND Top 5 ddx hit == 0) Counts:")
 print(diagnosis_counts)
 
 # Plot all failing diagnoses as a horizontal bar chart
