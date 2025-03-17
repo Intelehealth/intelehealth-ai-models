@@ -8,6 +8,20 @@ import matplotlib.colors as mcolors
 file_path = 'merged_llm_concordance_results_converted.csv'
 df = pd.read_csv(file_path)
 
+# Check for rows with Top 1 ddx hit == 0 and Top 5 ddx hit == 0 (Human rank 0)
+human_rank_0_count = len(df[(df['Top 1 ddx hit'] == 0) & (df['Top 5 ddx hit'] == 0)])
+gemini_match_in_human_0 = len(df[(df['Top 1 ddx hit'] == 0) & (df['Top 5 ddx hit'] == 0) & (df['Gemini Match Rank'] == 0)])
+
+print(f"Number of rows marked as 0 by human (Top 1 ddx hit = 0 and Top 5 ddx hit = 0): {human_rank_0_count}")
+print(f"Number of these rows where Gemini also had match rank 0: {gemini_match_in_human_0}")
+
+# Calculate percentage of agreement for rank 0
+if human_rank_0_count > 0:
+    agreement_percentage = (gemini_match_in_human_0/human_rank_0_count)*100
+    print(f"Percentage of agreement for rank 0: {agreement_percentage:.2f}%")
+else:
+    print("Percentage of agreement for rank 0: N/A (no rows with human rank 0)")
+
 # Filter out rows where GT diagnosis doesn't match history
 df = df[
     ~(
@@ -125,23 +139,24 @@ print(f"Count where Top 5 ddx hit is 5 and Gemini Match Rank is 5: {count_top5_5
 print(f"Count where Top 5 ddx hit is 5 and Gemini Match Rank is 0: {count_top5_5_gemini0}")
 print(f"Count where Top 5 ddx hit is 5 and Gemini Match Rank is NaN: {count_top5_5_geminiNaN}")
 
-# Row 0 (Human rank 0)
-count_no_top_gemini1 = len(df[(df['Top 1 ddx hit'].isna() & df['Top 5 ddx hit'].isna()) & (df['Gemini Match Rank'] == 1)])
-count_no_top_gemini2 = len(df[(df['Top 1 ddx hit'].isna() & df['Top 5 ddx hit'].isna()) & (df['Gemini Match Rank'] == 2)])
-count_no_top_gemini3 = len(df[(df['Top 1 ddx hit'].isna() & df['Top 5 ddx hit'].isna()) & (df['Gemini Match Rank'] == 3)])
-count_no_top_gemini4 = len(df[(df['Top 1 ddx hit'].isna() & df['Top 5 ddx hit'].isna()) & (df['Gemini Match Rank'] == 4)])
-count_no_top_gemini5 = len(df[(df['Top 1 ddx hit'].isna() & df['Top 5 ddx hit'].isna()) & (df['Gemini Match Rank'] == 5)])
-count_no_top_gemini0 = len(df[(df['Top 1 ddx hit'].isna() & df['Top 5 ddx hit'].isna()) & (df['Gemini Match Rank'] == 0)])
-count_no_top_geminiNaN = len(df[(df['Top 1 ddx hit'].isna() & df['Top 5 ddx hit'].isna()) & (df['Gemini Match Rank'].isna())])
+# Row 0 (Human rank 0) - Fix: check for explicit 0 values instead of NaN
+count_no_top_gemini1 = len(df[(df['Top 1 ddx hit'] == 0) & (df['Top 5 ddx hit'] == 0) & (df['Gemini Match Rank'] == 1)])
+count_no_top_gemini2 = len(df[(df['Top 1 ddx hit'] == 0) & (df['Top 5 ddx hit'] == 0) & (df['Gemini Match Rank'] == 2)])
+count_no_top_gemini3 = len(df[(df['Top 1 ddx hit'] == 0) & (df['Top 5 ddx hit'] == 0) & (df['Gemini Match Rank'] == 3)])
+count_no_top_gemini4 = len(df[(df['Top 1 ddx hit'] == 0) & (df['Top 5 ddx hit'] == 0) & (df['Gemini Match Rank'] == 4)])
+count_no_top_gemini5 = len(df[(df['Top 1 ddx hit'] == 0) & (df['Top 5 ddx hit'] == 0) & (df['Gemini Match Rank'] == 5)])
+count_no_top_gemini0 = len(df[(df['Top 1 ddx hit'] == 0) & (df['Top 5 ddx hit'] == 0) & (df['Gemini Match Rank'] == 0)])
+count_no_top_geminiNaN = len(df[(df['Top 1 ddx hit'] == 0) & (df['Top 5 ddx hit'] == 0) & (df['Gemini Match Rank'].isna())])
 
 print(f"\nRow 0 (Human rank 0):")
-print(f"Count where neither Top 1 nor Top 5 ddx hit and Gemini Match Rank is 1: {count_no_top_gemini1}")
-print(f"Count where neither Top 1 nor Top 5 ddx hit and Gemini Match Rank is 2: {count_no_top_gemini2}")
-print(f"Count where neither Top 1 nor Top 5 ddx hit and Gemini Match Rank is 3: {count_no_top_gemini3}")
-print(f"Count where neither Top 1 nor Top 5 ddx hit and Gemini Match Rank is 4: {count_no_top_gemini4}")
-print(f"Count where neither Top 1 nor Top 5 ddx hit and Gemini Match Rank is 5: {count_no_top_gemini5}")
-print(f"Count where neither Top 1 nor Top 5 ddx hit and Gemini Match Rank is 0: {count_no_top_gemini0}")
-print(f"Count where neither Top 1 nor Top 5 ddx hit and Gemini Match Rank is NaN: {count_no_top_geminiNaN}")
+print(f"Count where Top 1 and Top 5 ddx hit are 0 and Gemini Match Rank is 1: {count_no_top_gemini1}")
+print(f"Count where Top 1 and Top 5 ddx hit are 0 and Gemini Match Rank is 2: {count_no_top_gemini2}")
+print(f"Count where Top 1 and Top 5 ddx hit are 0 and Gemini Match Rank is 3: {count_no_top_gemini3}")
+print(f"Count where Top 1 and Top 5 ddx hit are 0 and Gemini Match Rank is 4: {count_no_top_gemini4}")
+print(f"Count where Top 1 and Top 5 ddx hit are 0 and Gemini Match Rank is 5: {count_no_top_gemini5}")
+print(f"Count where Top 1 and Top 5 ddx hit are 0 and Gemini Match Rank is 0: {count_no_top_gemini0}")
+print(f"Count where Top 1 and Top 5 ddx hit are 0 and Gemini Match Rank is NaN: {count_no_top_geminiNaN}")
+print(f"Total count where Top 1 and Top 5 ddx hit are 0: {human_rank_0_count}")
 
 # Create a new concordance matrix based on the direct counts
 direct_concordance = np.zeros((6, 6), dtype=int)
