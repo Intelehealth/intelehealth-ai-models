@@ -40,6 +40,8 @@ def diagnoses_match_openai(gt_diagnosis, llm_diagnosis, client):
     
     Do these diagnoses refer to the same medical condition? Consider synonyms, abbreviations, and different ways of describing the same condition.
     
+    Note: If Ground Truth Diagnosis is Acute Pharyngitis, it matches with LLM Diagnosis of Common Cold, Viral Upper Respiratory Infection (URTI) etc and are treated as same. Mark them as Yes.
+
     Your response should be in the following format:
     Match: [Yes/No]
     Rationale: [Your explanation]
@@ -102,8 +104,11 @@ def diagnoses_match_gemini(gt_diagnosis, llm_diagnosis, client):
     Ground Truth Diagnosis: {gt_diagnosis}
     LLM Diagnosis: {llm_diagnosis}
     
+    Note: If Ground Truth Diagnosis is Acute Pharyngitis, it matches with LLM Diagnosis of Common Cold, Viral Upper Respiratory Infection (URTI) etc and are treated as same. Mark them as Yes.
+
     Do these diagnoses refer to the same medical condition? Consider synonyms, abbreviations, and different ways of describing the same condition.
     
+
     Your response should be in the following format:
     Match: [Yes/No]
     Rationale: [Your explanation]
@@ -261,13 +266,37 @@ def analyze_diagnoses(csv_path, output_path):
     
     # Process each row with tqdm progress bar
     processed_count = 0
-    for idx, row in tqdm(df[:10].iterrows(), total=len(df), desc="Analyzing diagnoses"):
+    for idx, row in tqdm(df[:].iterrows(), total=len(df), desc="Analyzing diagnoses"):
         # Skip rows with empty LLM Diagnosis or Diagnosis
         if pd.isna(row['LLM Diagnosis']) or pd.isna(row['Diagnosis']) or row['LLM Diagnosis'] == "" or row['Diagnosis'] == "":
             continue
         
         # Extract the ground truth diagnosis
-        gt_diagnosis = row['Diagnosis'].split(':')[0] if ':' in row['Diagnosis'] else row['Diagnosis']
+        # Extract multiple ground truth diagnoses and clean them
+        gt_diagnoses = []
+        if ':' in row['Diagnosis']:
+            # Split by comma to handle multiple diagnoses
+            diagnosis_parts = row['Diagnosis'].split(',')
+            for part in diagnosis_parts:
+                part = part.strip()
+                # Extract diagnosis name before the colon
+                if ':' in part:
+                    diagnosis = part.split(':')[0].strip()
+                    # Remove any trailing/leading whitespace
+                    diagnosis = diagnosis.strip()
+                    gt_diagnoses.append(diagnosis)
+                else:
+                    gt_diagnoses.append(part.strip())
+        else:
+            gt_diagnoses = [row['Diagnosis'].strip()]
+        
+        # Use the first diagnosis as primary gt_diagnosis for the rest of the code
+        # If there are multiple ground truth diagnoses, combine them with commas
+        if len(gt_diagnoses) > 1:
+            gt_diagnosis = ", ".join(gt_diagnoses)
+        else:
+            gt_diagnosis = gt_diagnoses[0]
+            # gt_diagnosis = row['Diagnosis'].split(':')[0] if ':' in row['Diagnosis'] else row['Diagnosis']
         
         # Extract the list of LLM diagnoses
         llm_diagnoses = extract_diagnoses(row['LLM Diagnosis'])
@@ -295,6 +324,7 @@ def analyze_diagnoses(csv_path, output_path):
             
             # Check Gemini match
             gemini_result, gemini_rationale = diagnoses_match_gemini(gt_diagnosis, diagnosis, client)
+            print(f"Gemini result: {gemini_result}, Gemini rationale: {gemini_rationale}, gt_diagnosis: {gt_diagnosis}, diagnosis: {diagnosis}")
             if gemini_result and gemini_match_rank is None:
                 gemini_match_rank = i
                 gemini_match_rationale = gemini_rationale
@@ -388,6 +418,9 @@ def analyze_diagnoses(csv_path, output_path):
 
 if __name__ == "__main__":
     input_csv = "gemini_2_flash_nas_combined_ayu_inference_merged_latest.csv"
-    output_csv = "gemini_2_flash_nas_combined_ayu_inference_with_match_ranks_llm.csv"
+    output_csv = "gemini_2_flash_nas_combined_ayu_inference_with_match_ranks_llm_550_600.csv"
+
+    input_csv = "./data/llm_as_judge_results/21_03_2005_gemini_2_flash_ayu_cleaned_telemedicine_nas_v0.2_judged_50_100.csv"
+    output_csv = "./data/llm_as_judge_results/21_03_2005_gemini_2_flash_ayu_cleaned_telemedicine_nas_v0.2_judged_50_100_match_ranks.csv"
     
     analyze_diagnoses(input_csv, output_csv) 

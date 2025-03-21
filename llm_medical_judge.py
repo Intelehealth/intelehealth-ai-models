@@ -17,7 +17,7 @@ load_dotenv(
 # Configure OpenAI API
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=GEMINI_API_KEY)
+gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
 def get_gpt4_judgment(gt_diagnoses: List[str], llm_diagnosis: str) -> Tuple[bool, str]:
     """
@@ -65,6 +65,8 @@ def get_gemini_judgment(gt_diagnoses: List[str], llm_diagnosis: str) -> Tuple[bo
     """
     prompt = f"""As a medical expert, evaluate if the following diagnosis is medically or semantically equivalent to any of the ground truth diagnoses.
 
+    Note: Diagnosis of Acute Pharyngitis matches with Common Cold, Viral Upper Respiratory Infection (URTI) etc and are treated as same.
+
     Ground Truth Diagnoses:
     {', '.join(gt_diagnoses)}
 
@@ -75,7 +77,7 @@ def get_gemini_judgment(gt_diagnoses: List[str], llm_diagnosis: str) -> Tuple[bo
     Consider medical terminology variations, common abbreviations, and synonymous conditions."""
 
     try:
-        response = client.models.generate_content(
+        response = gemini_client.models.generate_content(
                 model="gemini-2.0-flash",
                 contents=prompt,
             )
@@ -193,7 +195,7 @@ def evaluate_diagnoses(input_csv: str, output_csv: str, judge_model: str = "open
         # Save progress periodically
         if idx % 10 == 0:
             df.to_csv(output_csv, index=False)
-   
+
     # Save final results with position information
     df.to_csv(output_csv, index=False)
 
@@ -219,7 +221,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate medical diagnoses using LLM as judge")
     parser.add_argument("--input", type=str, default="data/v2_results/gemini_2_flash_nas_combined_ayu_inference_final.csv",
                         help="Path to input CSV file")
-    parser.add_argument("--output", type=str, default="data/v2_results/gemini_2_flash_nas_combined_ayu_inference_evaluated.csv",
+    parser.add_argument("--output", type=str, default="data/llm_as_judge_results/gemini_2_flash_nas_combined_ayu_inference_evaluated_by_gemini_2_flash.csv",
                         help="Path to output CSV file")
     parser.add_argument("--judge", type=str, choices=["openai", "gemini"], default="openai",
                         help="LLM to use as judge (openai or gemini)")
