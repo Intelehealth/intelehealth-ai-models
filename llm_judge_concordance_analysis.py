@@ -420,7 +420,7 @@ if __name__ == "__main__":
     input_csv = "gemini_2_flash_nas_combined_ayu_inference_merged_latest.csv"
     output_csv = "gemini_2_flash_nas_combined_ayu_inference_with_match_ranks_llm_550_600.csv"
 
-    input_csv = "./data/llm_as_judge_results/21_03_2005_gemini_2_flash_ayu_cleaned_telemedicine_nas_v0.2_judged_50_100.csv"
-    output_csv = "./data/llm_as_judge_results/21_03_2005_gemini_2_flash_ayu_cleaned_telemedicine_nas_v0.2_judged_50_100_match_ranks.csv"
+    input_csv = "./data/llm_as_judge_results/21_03_2005_gemini_2_flash_ayu_cleaned_telemedicine_nas_v0.2_judged_100_150.csv"
+    output_csv = "./data/llm_as_judge_results/21_03_2005_gemini_2_flash_ayu_cleaned_telemedicine_nas_v0.2_judged_100_150_match_ranks.csv"
     
     analyze_diagnoses(input_csv, output_csv) 
