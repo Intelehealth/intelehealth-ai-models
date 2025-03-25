@@ -10,7 +10,7 @@ def analyze_ddx_matches(csv_path):
     
     for diagnosis, group in df.groupby('Diagnosis'):
         # Calculate top 1 match (rank == 1)
-        diagnosis_ranks = group['Diagnosis Match Rank'].fillna(0)
+        diagnosis_ranks = group['Gemini Match Rank'].fillna(0)
         top1_count = (diagnosis_ranks == 1).sum()
         top1_percentage = (top1_count / len(group)) * 100 if len(group) > 0 else 0
         
