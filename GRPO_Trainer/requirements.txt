@@ -1,0 +1,9 @@
+torch
+pandas
+scikit-learn
+transformers  # For potential text embedding
+numpy
+google-generativeai>=0.3.0
+tqdm>=4.62.0
+sentence-transformers # For dense text embeddings
+imbalanced-learn # For resampling techniques like SMOTE 
