@@ -78,7 +78,7 @@ def openai_llm_judge(gold, pred, trace=None):
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for qiven case history of a patient for a doctor in rural India."},   
-            {"role": "user", "content": f"Expected output: " + gold.diagnosis},
+            {"role": "user", "content": f"Expected output: " + gold},
             {"role": "user", "content": f"Predicted output: " + str(pred_diagnosis) },
             {"role": "user", "content": """Evaluate the semantic similarity between the predicted and expected outputs. Consider the following: 
              1. Is the expected diagnosis present in the top 5 diagnosises predicted?
