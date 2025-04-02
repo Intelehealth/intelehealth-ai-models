@@ -67,8 +67,8 @@ model = AutoModelForCausalLM.from_pretrained(
 
 def openai_llm_judge(gold, pred, trace=None):
     print("############## evaluating open ai llm judge ###############")
-    print(gold.diagnosis)
-    pred_diagnosis = pred.output
+    print(gold)
+    pred_diagnosis = pred
     print(pred_diagnosis)
 
 
