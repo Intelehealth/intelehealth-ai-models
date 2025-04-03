@@ -2,15 +2,19 @@ import torch
 from datasets import load_dataset
 from transformers import AutoTokenizer, TrainingArguments, AutoModelForCausalLM
 from trl import GRPOTrainer, GRPOConfig
+from peft import LoraConfig, get_peft_model # Added PEFT imports
 
 import re # Keep re if needed for potential future answer parsing
 import json # Added json import
 import os # Added os import
+import logging # Add logging import
 # from google import genai
 from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import BaseModel
 
+# Configure basic logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_ORG_ID = os.getenv("OPENAI_ORG_ID")
@@ -35,11 +39,11 @@ class DdxResponse(BaseModel):
 model_id = "Qwen/Qwen2.5-3B-Instruct"
 dataset_path = "train_grpo_data.jsonl"
 output_dir = "grpo_qwen_trained_model"
-num_train_epochs = 1 # Adjust as needed
+# num_train_epochs = 1 # Removed, max_steps will be used
 # Adjust batch size and gradient accumulation based on your M4's memory for Qwen
-per_device_train_batch_size = 1 # Start low for ~3B model
-gradient_accumulation_steps = 8 # Increase accumulation to compensate for low batch size
-learning_rate = 1.41e-5 # May need tuning for Qwen
+per_device_train_batch_size = 1 # User specified
+gradient_accumulation_steps = 8 # User specified
+# learning_rate = 1.41e-5 # Updated below in GRPOConfig
 beta = 0.1 # GRPO specific hyperparameter
 seed = 42
 
@@ -62,9 +66,34 @@ print(f"Loading model: {model_id}")
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
     torch_dtype="auto",
-    device_map="auto",
+    device_map="auto", # device_map='auto' handles placing model parts on MPS/CPU
 )
 
+# --- PEFT LoRA Configuration ---
+print("Applying PEFT LoRA configuration...")
+lora_config = LoraConfig(
+    r=32, # Updated rank
+    lora_alpha=32, # Often set higher than r
+    target_modules=[ # Common targets for Qwen models
+        "q_proj",
+        "v_proj",
+        "k_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+    ],
+    lora_dropout=0.1,
+    bias="none",
+    task_type="CAUSAL_LM" # Specify task type
+)
+
+model = get_peft_model(model, lora_config)
+print("PEFT model created.")
+model.print_trainable_parameters()
+
+# --- LLM Judge ---
+# Function to interact with OpenAI API
 def openai_llm_judge(gold, pred, trace=None):
     print("############## evaluating open ai llm judge ###############")
     print(gold)
@@ -85,7 +114,7 @@ def openai_llm_judge(gold, pred, trace=None):
              2. Is the core meaning preserved even if the wording differs from medical terminologies and synonyms for the matching expected and predicted diagnosis?
              3. Are there any significant omissions or additions in the predicted output?
              
-             Provide output as valid JSON with field `score` as '1' for similar and '0' for not similar and field `rationale` having the reasoning string for this score."""}
+             Provide output as valid JSON with field `matching rank` within 1-5 for any match and 0 for no match and field `rationale` having the reasoning string for this score."""}
         ],
         response_format = DdxResponse
     )
@@ -104,24 +133,36 @@ def openai_llm_judge(gold, pred, trace=None):
     # time.sleep(2)
 
     return score
+
 # Configure training arguments using GRPOConfig
 training_args = GRPOConfig(
     output_dir="Qwen2-2.5B-GRPO-test",
-    learning_rate=1e-5,
+    learning_rate=3e-4, # Updated learning rate (Karpathy Constant)
     remove_unused_columns=False,  # to access the solution column in accuracy_reward
-    gradient_accumulation_steps=16,
-    num_train_epochs=1,
-    bf16=True,
+    gradient_accumulation_steps=8, # User specified
+    per_device_train_batch_size=2, # User specified
+    # num_train_epochs=1, # Removed, using max_steps
+    max_steps=500, # User specified max steps
+    bf16=True, # Keeping bf16 for performance, should work on M4
     # Parameters that control de data preprocessing
-    max_completion_length=1000,  # Increased from 64
-    num_generations=2,  # default: 8
-    max_prompt_length=128,  # default: 512
+    # Setting max_length based on user's max sequence length 3000
+    # Assuming max_prompt + max_completion <= 3000
+    # Allocate proportionally or based on expected lengths.
+    # Let's try allocating more to completion.
+    max_prompt_length=1000, # Adjusted (e.g., 1000)
+    max_completion_length=2000, # Adjusted (e.g., 2000)
+    num_generations=2,  # Keeping this low for memory
+    # max_prompt_length=128,  # default: 512 - Replaced by above
     # Parameters related to reporting and saving
-    report_to="none",
-    logging_steps=10,
+    report_to="all", # Changed from "none"
+    logging_strategy="steps", # Explicitly set
+    logging_steps=10, # Logging every 10 steps as per eval
     push_to_hub=True,
     save_strategy="steps",
-    save_steps=10,
+    save_steps=10, # Save checkpoint at each eval step
+    eval_strategy="steps", # User specified
+    eval_steps=10, # User specified
+    # save_steps=10, # Effective batch size is 8 (1*8). Steps per epoch varies.
 )
 
 
@@ -181,22 +222,17 @@ def calculate_reward(response_text, ground_truth_diagnosis):
         position_reward = 0.0
         if parsed_answer is not None:
             try:
-
-
-                # Placeholder for the actual API call - replace with your Gemini client implementation
                 response = openai_llm_judge(ground_truth_diagnosis, parsed_answer)
-                llm_rank_text = response.text.strip()
+                llm_rank_text = response
 
                 print(f"INFO: Simulated LLM Rank: {llm_rank_text}")
-                # --- End Placeholder ---
-
 
                 # Parse the LLM response
                 try:
                     rank = int(llm_rank_text)
                     if not 1 <= rank <= 5:
                         print(f"Warning: LLM returned rank {rank} outside the expected range [1, 6]. Defaulting to 6.")
-                        rank = 0
+                        rank = 6
                 except ValueError:
                     print(f"Warning: Could not parse integer rank from LLM response: '{llm_rank_text}'. Defaulting to exact match logic.")
                     # Fallback to exact match if LLM response is not a valid integer
@@ -208,7 +244,6 @@ def calculate_reward(response_text, ground_truth_diagnosis):
                 rank = 1 if parsed_answer.lower() == ground_truth_diagnosis.lower() else 6
 
             # Calculate position reward based on the obtained rank
-            rank = 1 if parsed_answer.lower() == ground_truth_diagnosis.lower() else 6
             position_reward = max(0, 1.2 - 0.2 * rank)
             reward += position_reward
         # length_penalty = 0.0
@@ -232,10 +267,20 @@ train_dataset = dataset_dict['train']
 validation_dataset = temp_test['train'] 
 test_dataset = temp_test['test']
 
+# Print dataset size
+print(f"Training dataset size: {len(train_dataset)}")
+print(f"Effective batch size: {training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps}")
+print(f"Expected steps per epoch: {len(train_dataset) // (training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps)}")
 
 trainer = GRPOTrainer(
-    model=model, reward_funcs=[combined_reward_func], args=training_args, train_dataset=train_dataset
+    model=model,
+    reward_funcs=[combined_reward_func],
+    args=training_args,
+    train_dataset=train_dataset,
+    eval_dataset=validation_dataset # Added validation dataset for evaluation
 )
 
+# Print before starting training
+print("\n---> Starting Training <---\n")
 trainer.train()
 trainer.save_model(training_args.output_dir)
