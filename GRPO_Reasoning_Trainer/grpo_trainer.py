@@ -72,7 +72,7 @@ model = AutoModelForCausalLM.from_pretrained(
 # --- PEFT LoRA Configuration ---
 print("Applying PEFT LoRA configuration...")
 lora_config = LoraConfig(
-    r=32, # Updated rank
+    r=16, # Updated rank
     lora_alpha=32, # Often set higher than r
     target_modules=[ # Common targets for Qwen models
         "q_proj",
@@ -139,29 +139,31 @@ training_args = GRPOConfig(
     output_dir="Qwen2-2.5B-GRPO-test",
     learning_rate=3e-4, # Updated learning rate (Karpathy Constant)
     remove_unused_columns=False,  # to access the solution column in accuracy_reward
-    gradient_accumulation_steps=8, # User specified
-    per_device_train_batch_size=2, # User specified
+    gradient_accumulation_steps=16, # Increased to reduce memory per step
+    per_device_train_batch_size=2, # Kept at 1 (cannot reduce further)
     # num_train_epochs=1, # Removed, using max_steps
-    max_steps=500, # User specified max steps
+    max_steps=25, # User specified max steps
     bf16=True, # Keeping bf16 for performance, should work on M4
     # Parameters that control de data preprocessing
     # Setting max_length based on user's max sequence length 3000
     # Assuming max_prompt + max_completion <= 3000
     # Allocate proportionally or based on expected lengths.
     # Let's try allocating more to completion.
-    max_prompt_length=1000, # Adjusted (e.g., 1000)
-    max_completion_length=2000, # Adjusted (e.g., 2000)
+    # Reduced sequence lengths significantly to combat OOM
+    max_prompt_length=512, # Reduced from 1000
+    max_completion_length=2000, # Reduced from 2000
     num_generations=2,  # Keeping this low for memory
     # max_prompt_length=128,  # default: 512 - Replaced by above
     # Parameters related to reporting and saving
-    report_to="all", # Changed from "none"
+    report_to=["tensorboard", "wandb"], # Explicitly enable TensorBoard (and wandb if desired/setup)
     logging_strategy="steps", # Explicitly set
-    logging_steps=10, # Logging every 10 steps as per eval
+    logging_steps=1, # Logging every 1 steps as per eval
     push_to_hub=True,
     save_strategy="steps",
-    save_steps=10, # Save checkpoint at each eval step
+    save_steps=5, # Save checkpoint at each eval step
     eval_strategy="steps", # User specified
-    eval_steps=10, # User specified
+    eval_steps=1, # User specified
+    optim="adamw_torch", # Or just remove this line to use the HF default
     # save_steps=10, # Effective batch size is 8 (1*8). Steps per epoch varies.
 )
 
