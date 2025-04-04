@@ -1,0 +1,19 @@
+transformers>=4.30.0
+trl>=0.8.6
+datasets>=2.10.0
+torch>=2.0.0 # Ensure PyTorch version supports MPS
+accelerate>=0.25.0 # Often needed by TRL/Transformers trainers
+openai # Added for LLM judge
+pandas # Added for data processing
+peft # Added for LoRA
+pydantic # Added for data validation
+python-dotenv # Added for loading environment variables
+scikit-learn # Added for train_test_split
+tqdm # Added for progress bars
+# Add protobuf if you encounter related errors, especially with older setups
+# protobuf
+
+# Qwen dependencies
+tiktoken
+einops # Often used by newer models
+# transformers_stream_generator # Sometimes needed for generation with Qwen 
