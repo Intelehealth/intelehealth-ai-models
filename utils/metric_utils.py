@@ -85,6 +85,46 @@ def gemini_llm_judge(gold, pred, trace=None):
         print("Failed to parse JSON response")
         return 0
 
+def openai_llm_ten_ddx_judge(gold, pred, trace=None):
+    print("############## evaluating open ai llm judge ###############")
+    print(gold.diagnosis)
+    pred_diagnosis = pred.output
+    print(pred_diagnosis)
+
+
+    print("\n")
+    response = client.beta.chat.completions.parse(
+        
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for qiven case history of a patient for a doctor in rural India."},   
+            {"role": "user", "content": f"Expected output: " + gold.diagnosis},
+            {"role": "user", "content": f"Predicted output: " + str(pred_diagnosis) },
+            {"role": "user", "content": """Evaluate the semantic similarity between the predicted and expected outputs. Consider the following: 
+             1. Is the expected diagnosis present in the top 10 diagnosises predicted?
+             2. Is the core meaning preserved even if the wording differs from medical terminologies and synonyms for the matching expected and predicted diagnosis?
+             3. Are there any significant omissions or additions in the predicted output?
+             
+             Provide output as valid JSON with field `score` as '1' for similar and '0' for not similar and field `rationale` having the reasoning string for this score."""}
+        ],
+        response_format = DdxResponse
+    )
+    # print(response)
+    # Extract the content from the first choice
+    # content = response.choices[0].message.content
+    content = response.choices[0].message.parsed
+
+    print("Response from llm:")
+    print("LLM Judge score: ", content.score)
+    score = content.score
+    rationale = content.rationale
+    print("Rationale: ", content.rationale)
+    
+
+    # time.sleep(2)
+
+    return score
+
 
 def openai_llm_judge(gold, pred, trace=None):
     print("############## evaluating open ai llm judge ###############")
@@ -100,6 +140,46 @@ def openai_llm_judge(gold, pred, trace=None):
         messages=[
             {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for qiven case history of a patient for a doctor in rural India."},   
             {"role": "user", "content": f"Expected output: " + gold.diagnosis},
+            {"role": "user", "content": f"Predicted output: " + str(pred_diagnosis) },
+            {"role": "user", "content": """Evaluate the semantic similarity between the predicted and expected outputs. Consider the following: 
+             1. Is the expected diagnosis present in the top 5 diagnosises predicted?
+             2. Is the core meaning preserved even if the wording differs from medical terminologies and synonyms for the matching expected and predicted diagnosis?
+             3. Are there any significant omissions or additions in the predicted output?
+             
+             Provide output as valid JSON with field `score` as '1' for similar and '0' for not similar and field `rationale` having the reasoning string for this score."""}
+        ],
+        response_format = DdxResponse
+    )
+    # print(response)
+    # Extract the content from the first choice
+    # content = response.choices[0].message.content
+    content = response.choices[0].message.parsed
+
+    print("Response from llm:")
+    print("LLM Judge score: ", content.score)
+    score = content.score
+    rationale = content.rationale
+    print("Rationale: ", content.rationale)
+    
+
+    # time.sleep(2)
+
+    return score
+
+def openai_qwen_local_llm_judge(gold, pred, trace=None):
+    print("############## evaluating open ai llm judge ###############")
+    print(gold.differential_diagnoses)
+    pred_diagnosis = pred
+    print(pred_diagnosis)
+
+
+    print("\n")
+    response = client.beta.chat.completions.parse(
+        
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for qiven case history of a patient for a doctor in rural India."},   
+            {"role": "user", "content": f"Expected output: " + gold.differential_diagnoses},
             {"role": "user", "content": f"Predicted output: " + str(pred_diagnosis) },
             {"role": "user", "content": """Evaluate the semantic similarity between the predicted and expected outputs. Consider the following: 
              1. Is the expected diagnosis present in the top 5 diagnosises predicted?
@@ -145,7 +225,7 @@ def load_gemini_lm_prod():
     # dspy.settings.configure(lm=gemini, top_k=5)
 
 def load_gemini2_lm():
-    gemini = dspy.Google("models/gemini-2.0-flash-exp", api_key=GEMINI_API_KEY)
+    gemini = dspy.Google("models/gemini-2.0-flash", api_key=GEMINI_API_KEY)
     dspy.settings.configure(lm=gemini, max_tokens=10000, top_k=5)
 
 def load_gemini_vertexai_lm():
@@ -219,4 +299,16 @@ def load_openAI_direct_client():    # Initialize OpenAI client that points to th
 
 def load_lm_studio_medllama3_v20_url():
     lm = dspy.LM('lm_studio/probemedicalyonseimailab-medllama3-v20', api_base='http://localhost:1234/v1', api_key='', model_type="chat", temperature=1.0)
+    dspy.configure(lm=lm, top_k=5)
+
+def load_lm_studio_deepseek_r1_qwen_distil_32b():
+    lm = dspy.LM('lm_studio/bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF', api_base='http://localhost:1234/v1', api_key='', model_type="chat", temperature=1.0)
+    dspy.configure(lm=lm, top_k=5)
+
+def load_lm_studio_qwen_qwq_32b():
+    lm = dspy.LM('lm_studio/Qwen/QwQ-32B-GGUF', api_base='http://localhost:1234/v1', api_key='', model_type="chat", temperature=1.0)
+    dspy.configure(lm=lm, top_k=5)
+
+def load_lm_studio_qwen_merged_3b_grpo():
+    lm = dspy.LM('lm_studio/Qwen2.5-3B-Instruct-Qlora-GGUF', api_base='http://localhost:1234/v1', api_key='', model_type="chat", temperature=1.0)
     dspy.configure(lm=lm, top_k=5)
