@@ -2,10 +2,11 @@ import dspy
 import time
 
 import dspy
-from utils.metric_utils import load_gemini_lm_prod, load_open_ai_lm, load_gemini_lm, load_gemini2_lm
+from utils.metric_utils import load_gemini_lm_prod, load_open_ai_lm, load_gemini_lm, load_gemini2_lm, load_gemini2_5_lm
 from dotenv import load_dotenv
 from modules.DDxModule import DDxModule
 from modules.DDxMulModule import DDxMulModule
+from modules.TelemedicineDDxModule import TelemedicineDDxModule
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -29,15 +30,28 @@ class DDxInfo(BaseModel):
     model_name: str
     prompt_version: int
 
-cot = DDxModule()
+
 
 @app.post("/predict")
 async def ddx(request_body: DDxInfo):
+    cot = None
     prompt = ""
     if request_body.model_name == "gemini-2.0-flash":
         if request_body.prompt_version == 1:
+            cot = DDxModule()
             cot.load("outputs/" + "10_02_2025_ddx_gemini2_only_num_trials_20_ayu_data_top_k5_single_diagnosis.json")
             prompt = prompt_config[1]
+
+        else:
+            return {
+                "status": "error",
+                "message": "Invalid prompt version"
+            }
+    elif request_body.model_name == "gemini-2.0-flash-001":
+        if request_body.prompt_version == 2:
+            cot = TelemedicineDDxModule()
+            cot.load("outputs/" + "19_03_2025_21_31_ddx_gemini_cot_ayu_cleaned_data_llm_judge.json")
+            prompt = prompt_config[2]
         else:
             return {
                 "status": "error",
@@ -52,6 +66,7 @@ async def ddx(request_body: DDxInfo):
     dspy_program = dspy.asyncify(cot)
 
     try:
+        print("prompt selected: ", prompt)
         result = await dspy_program(case=request_body.case, question=prompt)
         print(result)
         if result.output.diagnosis == "NA":
