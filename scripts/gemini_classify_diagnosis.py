@@ -16,7 +16,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # --- Configuration ---
 INPUT_CSV_PATH = '/Users/bsb/work/intelehealth-ai-models/data/NAS_v2_unseen_data_clean_gt_no_fatigue_v0.1.csv'
-OUTPUT_CSV_PATH = '/Users/bsb/work/intelehealth-ai-models/data/NAS_v2_unseen_data_clean_gt_symptoms_as_diagnoses_v0.1.csv'
+OUTPUT_CSV_PATH = '/Users/bsb/work/intelehealth-ai-models/data/NAS_v2_unseen_data_clean_gt_symptoms_as_diagnoses_v0.3.csv'
 DIAGNOSIS_COLUMN = 'Diagnosis'
 OUTPUT_COLUMN = 'Is_Symptom'
 API_CALL_DELAY_SECONDS = 0.5 # Delay between API calls to avoid rate limiting
@@ -42,8 +42,7 @@ def classify_diagnosis_with_gemini(diagnosis_text, client):
 
     Medical Text: "{diagnosis_text}"
 
-    Is this text describing a symptom (like 'headache', 'cough', 'fever', 'pain', 'nausea', 'rash')
-    rather than a specific disease diagnosis (like 'Pneumonia', 'Diabetes Mellitus', 'Hypertension', 'Appendicitis')?
+    Also check snomed CT terminology to see if the text is a symptom or diagnosis.
 
     Answer with only 'Yes' (if it is primarily a symptom) or 'No' (if it is primarily a disease diagnosis).
     """
