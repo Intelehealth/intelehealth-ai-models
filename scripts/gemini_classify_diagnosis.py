@@ -42,7 +42,7 @@ def classify_diagnosis_with_gemini(diagnosis_text, client):
 
     Medical Text: "{diagnosis_text}"
 
-    Also check snomed CT terminology to see if the text is a symptom or diagnosis.
+    Also refer to SNONED CT terminology to see if the diagnosis text is a symptom or diagnosis.
 
     Answer with only 'Yes' (if it is primarily a symptom) or 'No' (if it is primarily a disease diagnosis).
     """
