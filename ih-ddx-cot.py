@@ -5,9 +5,11 @@ import os
 import random
 from dotenv import load_dotenv
 
-from modules.DDxModule import DDxModule
-from modules.DDxLocalModule import DDxLocalModule
-from modules.TelemedicineDDxModule import TelemedicineDDxModule
+# from modules.DDxModule import DDxModule
+# from modules.DDxLocalModule import DDxLocalModule
+# from modules.TelemedicineDDxModule import TelemedicineDDxModule
+# from modules.TelemedicineTenDDxModule import TelemedicineTenDDxModule
+from modules.DDxKBModule import DDxKBModule
 
 load_dotenv(
     "ops/.env"
@@ -19,7 +21,6 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 trainset = prepare_ddx_data.ret_training_examples()
 print(trainset[:2])
 random.shuffle(trainset)
-
 
 
 # #load_open_ai_lm()
@@ -49,10 +50,10 @@ if args.llm == 'gemini':
 current_datetime = datetime.now().strftime("%d_%m_%Y_%H_%M")
 
 # Create output filename based on parameters
-output_filename = f"{current_datetime}_ddx_{args.llm}_cot_patient_cleaned_data_llm_judge.json"
+output_filename = f"{current_datetime}_ddx_{args.llm}_cot_ayu_cleaned_data_llm_judge.json"
 
 # Update number of trials based on argument
 tp = dspy.MIPROv2(metric=openai_llm_judge, num_threads=4, num_candidates=4, max_labeled_demos=4)
-optimizedcot = tp.compile(TelemedicineDDxModule(), trainset=trainset, num_trials=args.num_trials)
+optimizedcot = tp.compile(DDxKBModule(), trainset=trainset, num_trials=args.num_trials)
 
 optimizedcot.save("outputs/" + output_filename)
