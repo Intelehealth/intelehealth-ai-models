@@ -5,10 +5,10 @@ import os
 import random
 from dotenv import load_dotenv
 
-# from modules.DDxModule import DDxModule
-# from modules.DDxLocalModule import DDxLocalModule
-# from modules.TelemedicineDDxModule import TelemedicineDDxModule
-# from modules.TelemedicineTenDDxModule import TelemedicineTenDDxModule
+from modules.DDxModule import DDxModule
+from modules.DDxLocalModule import DDxLocalModule
+from modules.TelemedicineDDxModule import TelemedicineDDxModule
+from modules.TelemedicineTenDDxModule import TelemedicineTenDDxModule
 from modules.DDxKBModule import DDxKBModule
 
 load_dotenv(
