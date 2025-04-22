@@ -128,10 +128,16 @@ if __name__ == "__main__":
         help="Name of the column containing the clinical notes in the CSV."
     )
     parser.add_argument(
-        "--num_rows",
+        "--start_row",
         type=int,
-        default=25,
-        help="Number of rows to process from the CSV file."
+        default=0,
+        help="The 0-based index of the first row to process from the CSV file."
+    )
+    parser.add_argument(
+        "--end_row",
+        type=int,
+        default=None, # Process until the end if not specified
+        help="The 0-based index of the row to stop processing at (exclusive). If not provided, process until the end."
     )
     parser.add_argument(
         "--max_new_tokens",
@@ -159,14 +165,33 @@ if __name__ == "__main__":
         logging.info(f"Loading CSV data from: {args.csv_path}")
         if not os.path.exists(args.csv_path):
             raise FileNotFoundError(f"CSV file not found at: {args.csv_path}")
-        df = pd.read_csv(args.csv_path, nrows=args.num_rows)
-        logging.info(f"Loaded {len(df)} rows from the CSV.")
+        # Read the entire CSV first
+        full_df = pd.read_csv(args.csv_path)
+        logging.info(f"Loaded {len(full_df)} total rows from the CSV.")
 
-        if args.notes_column not in df.columns:
-            raise ValueError(f"Column '{args.notes_column}' not found in the CSV file. Available columns: {df.columns.tolist()}")
+        # Select the specified range of rows
+        start = args.start_row
+        end = args.end_row if args.end_row is not None else len(full_df)
+
+        if start < 0:
+            logging.warning(f"start_row ({start}) is less than 0, adjusting to 0.")
+            start = 0
+        if end > len(full_df):
+            logging.warning(f"end_row ({end}) is greater than the number of rows ({len(full_df)}), adjusting to {len(full_df)}.")
+            end = len(full_df)
+        if start >= end:
+             raise ValueError(f"start_row ({start}) must be less than end_row ({end}). No rows to process.")
+
+
+        df_slice = full_df.iloc[start:end]
+        logging.info(f"Processing rows from index {start} to {end-1} (total {len(df_slice)} rows).")
+
+
+        if args.notes_column not in df_slice.columns:
+            raise ValueError(f"Column '{args.notes_column}' not found in the CSV file. Available columns: {df_slice.columns.tolist()}")
 
         # Prepare output CSV
-        output_columns = df.columns.tolist() + ['Generated Response']
+        output_columns = df_slice.columns.tolist() + ['Generated Response']
         logging.info(f"Saving results row by row to: {args.output_csv_path}")
 
         try:
@@ -174,11 +199,15 @@ if __name__ == "__main__":
                 csv_writer = csv.writer(outfile)
                 csv_writer.writerow(output_columns) # Write header
 
-                # Process each row and write to CSV
-                for index, row in df.iterrows():
+                # Process each row in the slice and write to CSV
+                # Use df_slice.iterrows() which yields (original_index, row_data)
+                for original_index, row in df_slice.iterrows():
+                    # original_index corresponds to the index in the full_df
+                    current_row_number = original_index + 1 # 1-based row number for logging
+
                     clinical_note = row[args.notes_column]
                     if pd.isna(clinical_note):
-                        logging.warning(f"Skipping row {index+1} due to missing clinical note.")
+                        logging.warning(f"Skipping row {current_row_number} (original index {original_index}) due to missing clinical note.")
                         # Write original row with empty response if note is missing? Optional.
                         # original_data = row.tolist()
                         # csv_writer.writerow(original_data + ['']) # Example: write skipped row
@@ -189,7 +218,7 @@ if __name__ == "__main__":
                     full_prompt = f"{clinical_note}\n\n{INSTRUCTION_PROMPT}"
 
 
-                    print("\n" + "="*20 + f" Processing Row {index + 1} " + "="*20)
+                    print("\n" + "="*20 + f" Processing Row {current_row_number} (Index {original_index}) " + "="*20)
                     # Limit printing long notes for brevity in console
                     print(f"\n[CLINICAL NOTE PREVIEW]:\n{clinical_note[:500]}...")
 
@@ -203,7 +232,7 @@ if __name__ == "__main__":
                     # Write row to output CSV
                     original_data = row.tolist()
                     csv_writer.writerow(original_data + [response])
-                    logging.info(f"Processed and wrote row {index + 1} to {args.output_csv_path}")
+                    logging.info(f"Processed and wrote row {current_row_number} (Index {original_index}) to {args.output_csv_path}")
 
 
         except IOError as e:
