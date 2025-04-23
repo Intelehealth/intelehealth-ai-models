@@ -31,10 +31,13 @@ client = OpenAI(
 )
 
 
-class DdxResponse(BaseModel):
+class TTxResponse(BaseModel):
     score: int
     rationale: str
 
+class DDxResponse(BaseModel):
+    score: int
+    rationale: str
 
 class GDdxResponse(BaseModel):
     score: float
@@ -123,6 +126,40 @@ def openai_llm_ten_ddx_judge(gold, pred, trace=None):
 
     # time.sleep(2)
 
+    return score
+
+def openai_llm_ttx_judge(gold, pred, trace=None):
+    print("############## evaluating open ai llm judge ###############")
+    print(gold.medications_gt)
+    print(pred.output.medications)
+    print("--------------------------------")
+    print("\n")
+    response = client.beta.chat.completions.parse(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for qiven case history of a patient for a doctor in rural India."}, 
+            {"role": "user", "content": f"Expected output: " + gold.medications_gt},
+            {"role": "user", "content": f"Predicted output: " + str(pred.output.medications)},
+            {"role": "user", "content": """Evaluate the semantic similarity between the predicted and expected outputs. Consider the following:
+            1. Is the expected medication present in the top 5 medications predicted. Consider semantic similarity for medication names?
+            2. Is the rationale for medications relevant to the patient history.
+            3. Are there any significant omissions or additions in the predicted output?
+
+            Provide output as valid JSON with field `score` as '1' for similar and '0' for not similar and field `rationale` having the reasoning string for this score."""}
+        ],
+        response_format = TTxResponse
+    )
+    # print(response)
+    # Extract the content from the first choice
+    # content = response.choices[0].message.content
+    content = response.choices[0].message.parsed
+    print("Response from llm:")
+    print("LLM Judge score: ", content.score)
+    score = content.score
+    rationale = content.rationale
+    print("Rationale: ", content.rationale)
+
+    # time.sleep(2)
     return score
 
 
@@ -229,7 +266,7 @@ def load_gemini2_lm():
     dspy.settings.configure(lm=gemini, max_tokens=10000, top_k=5)
 
 def load_gemini2_5_lm():
-    gemini = dspy.Google("models/gemini-2.0-flash-lite-001", api_key=GEMINI_API_KEY)
+    gemini = dspy.Google("gemini-2.5-flash-preview-04-17", api_key=GEMINI_API_KEY)
     dspy.settings.configure(lm=gemini, max_tokens=10000, top_k=5)
 
 def load_gemini_vertexai_lm():
