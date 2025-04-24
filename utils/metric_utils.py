@@ -128,6 +128,40 @@ def openai_llm_ten_ddx_judge(gold, pred, trace=None):
 
     return score
 
+def openai_llm_ttx_v2_judge(gold, pred, trace=None):
+    print("############## evaluating open ai llm judge ###############")
+    print(gold)
+    print(pred)
+    print("--------------------------------")
+    print("\n")
+    response = client.beta.chat.completions.parse(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for qiven case history of a patient for a doctor in rural India."}, 
+            {"role": "user", "content": f"Expected output: " + str(gold)},
+            {"role": "user", "content": f"Predicted output: " + str(pred.output.medication_recommendations)},
+            {"role": "user", "content": """Evaluate the semantic similarity between the predicted and expected outputs. Consider the following:
+            1. Is the expected medication present in the top 5 medications predicted. Consider semantic similarity for medication names?
+            2. Is the strength, route form, dosage, frequency, number of days to take the medication and the reason for the medication relevant to the patient history and also matching expected output?
+            3. Are there any significant omissions or additions in the predicted output?
+
+            Provide output as valid JSON with field `score` as '1' for similar and '0' for not similar and field `rationale` having the reasoning string for this score."""}
+        ],
+        response_format = TTxResponse
+    )
+    # print(response)
+    # Extract the content from the first choice
+    # content = response.choices[0].message.content
+    content = response.choices[0].message.parsed
+    print("Response from llm:")
+    print("LLM Judge score: ", content.score)
+    score = content.score
+    rationale = content.rationale
+    print("Rationale: ", content.rationale)
+
+    # time.sleep(2)
+    return score
+
 def openai_llm_ttx_judge(gold, pred, trace=None):
     print("############## evaluating open ai llm judge ###############")
     print(gold.medications_gt)
