@@ -9,7 +9,7 @@ class TTxv2Module(dspy.Module):
 
     def forward(self, case, diagnosis):
         print("Question in forward:")
-        question = "What is the relevant  medication, the strength, route form, the dosage, frequency, number of days to take the medication and the reason for the medication for the patient given the diagnosis and patient case?"
+        question = "What is the relevant  medication, the strength, route form, the dosage, frequency (eg: thrice a day), number of days to take the medication, instruction remarks for taking medication, and the reason for the medication for the patient given the diagnosis and patient case?"
         print(question)
         prediction = self.generate_answer(case=case, diagnosis=diagnosis, question=question)
         print(prediction)

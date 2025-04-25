@@ -4,7 +4,7 @@ class TTxv2Fields(dspy.Signature):
     """
         Based on given patient history, symptoms, physical exam findings, and the diagnosis, predict the medication for the patient.
 
-        For each medication: include the name of the medication, the strength, route form, the dosage, frequency,number of days to take the medication, and the reason for the medication.
+        For each medication: include the name of the medication, the strength, route form, the dosage, frequency (example - thrice daily), number of days to take the medication, instruction remarks for taking medication, and the reason for the medication.
 
         Your role is to act as a doctor conducting a telemedicine consultation with a patient in rural India.
         Keep all responses concise and to the point.
