@@ -10,7 +10,7 @@ from modules.TTxv2Module import TTxv2Module
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from prompt_config import prompt_config
-
+from ttx_client import process_medications
 
 load_dotenv(
     "ops/.env"
@@ -52,10 +52,29 @@ async def ttx_v1(request_body: BaseTTxRequest):
                 "data": "The Input provided does not have enough clinical details for AI based treatment recommendation."
             }
 
-        return {
-            "status": "success",
+        response_json = {
             "data": result.toDict()
         }
+        print("--------------------------------")
+        print(response_json)
+        print("--------------------------------")
+        result = {
+            "success": False,
+            "medications": []
+        }
+        # Process medication recommendations if present
+        if "data" in response_json and "output" in response_json["data"] and "medication_recommendations" in response_json["data"]["output"]:
+            med_text = response_json["data"]["output"]["medication_recommendations"]
+            result["medications"] = process_medications(med_text)
+            result["medical_advice"] = response_json["data"]["output"]["medical_advice"]
+            result["success"] = True
+        else:
+            result["error"] = "No medication recommendations found in API response"
+        print(result)
+        print("--------------------------------")
+
+        return result
+    
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Please try again later.")
@@ -66,4 +85,8 @@ async def health_status():
     return {
         "status": "AVAILABLE",
         "description": "Service status for TTx server"
-    } 
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000) 

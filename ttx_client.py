@@ -261,17 +261,8 @@ def get_treatment_recommendations(patient_case, diagnosis, api_url="http://127.0
         )
         
         if response.status_code == 200:
-            response_json = response.json()
-            # result["raw_response"] = response_json
-            
-            # Process medication recommendations if present
-            if "data" in response_json and "output" in response_json["data"] and "medication_recommendations" in response_json["data"]["output"]:
-                med_text = response_json["data"]["output"]["medication_recommendations"]
-                result["medications"] = process_medications(med_text)
-                result["medical_advice"] = response_json["data"]["output"]["medical_advice"]
-                result["success"] = True
-            else:
-                result["error"] = "No medication recommendations found in API response"
+            result = response.json()
+            # print(result)
         else:
             result["error"] = f"API error: {response.status_code} - {response.text}"
     except Exception as e:
