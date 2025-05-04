@@ -80,6 +80,56 @@ async def ttx_v1(request_body: BaseTTxRequest):
         raise HTTPException(status_code=500, detail="Internal Server Error. Please try again later.")
 
 
+@app.post("/ttx/v2")
+async def ttx_v2(request_body: BaseTTxRequest):
+    cot = None
+    if request_body.model_name == "gemini-2.0-flash":
+        cot = TTxv2Module()
+        cot.load("outputs/" + "04_05_2025_10_19_ttx_v3_gemini_cot_nas_v2_combined_llm_judge.json")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid model name for TTx v2")
+
+    dspy_program = dspy.asyncify(cot)
+
+    try:
+        result = await dspy_program(case=request_body.case, diagnosis=request_body.diagnosis)
+        print(result)
+        
+        if hasattr(result, 'output') and hasattr(result.output, 'treatment') and result.output.treatment == "NA":
+            print("no treatment possible")
+            return {
+                "status": "success",
+                "data": "The Input provided does not have enough clinical details for AI based treatment recommendation."
+            }
+
+        response_json = {
+            "data": result.toDict()
+        }
+        print("--------------------------------")
+        print(response_json)
+        print("--------------------------------")
+        result = {
+            "success": False,
+            "medications": []
+        }
+        # Process medication recommendations if present
+        if "data" in response_json and "output" in response_json["data"] and "medication_recommendations" in response_json["data"]["output"]:
+            med_text = response_json["data"]["output"]["medication_recommendations"]
+            result["medications"] = process_medications(med_text)
+            result["medical_advice"] = response_json["data"]["output"]["medical_advice"]
+            result["success"] = True
+        else:
+            result["error"] = "No medication recommendations found in API response"
+        print(result)
+        print("--------------------------------")
+
+        return result
+    
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Internal Server Error. Please try again later.")
+
+
 @app.get("/health-status")
 async def health_status():
     return {
