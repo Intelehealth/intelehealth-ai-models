@@ -1,6 +1,6 @@
 import dspy
 from utils import prepare_ddx_data
-from utils.metric_utils import openai_llm_judge, openai_llm_reasoning_judge, load_gemini2_lm, load_gemini2_5_lm, load_gemini_vertex_finetuned_lm, load_gemini_2_5_vertex_lm
+from utils.metric_utils import openai_llm_judge, openai_llm_reasoning_judge, load_gemini2_lm, load_gemini2_5_lm, load_gemini_vertex_finetuned_lm, load_gemini_2_5_vertex_lm, load_gemini2_5_lm_1
 import os
 import random
 from dotenv import load_dotenv
@@ -46,6 +46,8 @@ if args.llm == 'gemini':
     load_gemini2_lm()
 elif args.llm == 'gemini2':
     load_gemini2_5_lm()
+elif args.llm == 'gemini2_5':
+    load_gemini2_5_lm_1()
 elif args.llm == 'gemini_vertex_finetuned':
     load_gemini_vertex_finetuned_lm()
 elif args.llm == 'gemini_2_5_flash_vertex':

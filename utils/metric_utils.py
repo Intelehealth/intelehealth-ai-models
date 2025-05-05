@@ -23,6 +23,8 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 HYPERBOLIC_API_KEY = os.getenv("HYPERBOLIC_API_KEY")
 HYPERBOLIC_API_BASE = os.getenv("HYPERBOLIC_API_BASE")
 MEDLM_PROJECT_JSON = os.getenv("MEDLM_PROJECT_JSON")
+VERTEXAI_PROJECT = os.getenv("VERTEXAI_PROJECT")
+MODEL_ENDPOINT = os.getenv("MODEL_ENDPOINT")
 
 client = OpenAI(
   api_key = OPENAI_API_KEY,
@@ -87,46 +89,6 @@ def gemini_llm_judge(gold, pred, trace=None):
     except json.JSONDecodeError:
         print("Failed to parse JSON response")
         return 0
-
-def openai_llm_ten_ddx_judge(gold, pred, trace=None):
-    print("############## evaluating open ai llm judge ###############")
-    print(gold.diagnosis)
-    pred_diagnosis = pred.output
-    print(pred_diagnosis)
-
-
-    print("\n")
-    response = client.beta.chat.completions.parse(
-        
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for qiven case history of a patient for a doctor in rural India."},   
-            {"role": "user", "content": f"Expected output: " + gold.diagnosis},
-            {"role": "user", "content": f"Predicted output: " + str(pred_diagnosis) },
-            {"role": "user", "content": """Evaluate the semantic similarity between the predicted and expected outputs. Consider the following: 
-             1. Is the expected diagnosis present in the top 10 diagnosises predicted?
-             2. Is the core meaning preserved even if the wording differs from medical terminologies and synonyms for the matching expected and predicted diagnosis?
-             3. Are there any significant omissions or additions in the predicted output?
-             
-             Provide output as valid JSON with field `score` as '1' for similar and '0' for not similar and field `rationale` having the reasoning string for this score."""}
-        ],
-        response_format = DdxResponse
-    )
-    # print(response)
-    # Extract the content from the first choice
-    # content = response.choices[0].message.content
-    content = response.choices[0].message.parsed
-
-    print("Response from llm:")
-    print("LLM Judge score: ", content.score)
-    score = content.score
-    rationale = content.rationale
-    print("Rationale: ", content.rationale)
-    
-
-    # time.sleep(2)
-
-    return score
 
 def openai_llm_ttx_v2_judge(gold, pred, trace=None):
     print("############## evaluating open ai llm judge ###############")
@@ -196,6 +158,41 @@ def openai_llm_ttx_judge(gold, pred, trace=None):
     # time.sleep(2)
     return score
 
+def openai_llm_reasoning_judge(gold, pred, trace=None):
+    print("############## evaluating open ai llm judge ###############")
+    print(gold.diagnosis)
+    pred_diagnosis = pred
+    print(pred_diagnosis)
+
+
+    print("\n")
+    response = client.beta.chat.completions.parse(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are an assistant that helps in evaluating the similarity between two diagnosis for qiven case history of a patient for a doctor in rural India."},
+            {"role": "user", "content": f"Expected output: " + gold.diagnosis},
+            {"role": "user", "content": f"Predicted output: " + str(pred_diagnosis) },
+            {"role": "user", "content": """Evaluate the semantic similarity between the predicted and expected outputs. Consider the following: 
+             1. Is the expected diagnosis present in the top 5 diagnosises predicted?
+             2. Is the core meaning preserved even if the wording differs from medical terminologies and synonyms for the matching expected and predicted diagnosis?
+             3. Are there any significant omissions or additions in the predicted output?
+
+             Provide output as valid JSON with field `score` as '1' for similar and '0' for not similar and field `rationale` having the reasoning string for this score."""}
+        ],
+        response_format = DDxResponse
+    )
+    # print(response)
+    # Extract the content from the first choice
+    # content = response.choices[0].message.content
+    content = response.choices[0].message.parsed
+
+    print("Response from llm:")
+    print("LLM Judge score: ", content.score)
+    score = content.score
+    rationale = content.rationale
+    print("Rationale: ", content.rationale)
+
+    return score
 
 def openai_llm_judge(gold, pred, trace=None):
     print("############## evaluating open ai llm judge ###############")
@@ -219,7 +216,7 @@ def openai_llm_judge(gold, pred, trace=None):
              
              Provide output as valid JSON with field `score` as '1' for similar and '0' for not similar and field `rationale` having the reasoning string for this score."""}
         ],
-        response_format = DdxResponse
+        response_format = DDxResponse
     )
     # print(response)
     # Extract the content from the first choice
@@ -259,7 +256,7 @@ def openai_qwen_local_llm_judge(gold, pred, trace=None):
              
              Provide output as valid JSON with field `score` as '1' for similar and '0' for not similar and field `rationale` having the reasoning string for this score."""}
         ],
-        response_format = DdxResponse
+        response_format = DDxResponse
     )
     # print(response)
     # Extract the content from the first choice
@@ -300,8 +297,47 @@ def load_gemini2_lm():
     dspy.settings.configure(lm=gemini, max_tokens=10000, top_k=5)
 
 def load_gemini2_5_lm():
-    gemini = dspy.Google("gemini-2.5-flash-preview-04-17", api_key=GEMINI_API_KEY)
-    dspy.settings.configure(lm=gemini, max_tokens=10000, top_k=5)
+    gemini = dspy.Google("models/gemini-2.5-flash-preview-04-17", api_key=GEMINI_API_KEY)
+    dspy.settings.configure(lm=gemini, max_tokens=50000, top_k=5)
+
+def load_gemini2_5_lm_1():
+    gemini = dspy.LM("openai/gemini-2.5-flash-preview-04-17", api_key=GEMINI_API_KEY,
+                     api_base="https://generativelanguage.googleapis.com/v1beta/openai/",
+                     max_tokens=50000)
+    dspy.settings.configure(lm=gemini, top_k=5)
+
+def load_gemini_2_5_vertex_lm():
+    gemini = dspy.Google("models/gemini-2.5-flash-preview-04-17", api_key=GEMINI_API_KEY)
+
+    # gemini = dspy.Google(
+    #             model='vertex_ai/gemini-2.5-flash-preview-04-17"',
+    #             api_key=GEMINI_API_KEY,
+    #             vertex_project=VERTEXAI_PROJECT,
+    #             vertex_location="us-central1",
+    #             vertex_credentials=MEDLM_PROJECT_JSON)
+    dspy.settings.configure(lm=gemini, temperature=0.1)
+
+def load_gemini_vertex_finetuned_lm():
+    gemini = dspy.LM(
+                model=MODEL_ENDPOINT,
+                base_model="vertex_ai/gemini/gemini-2.0-flash",
+                api_key=GEMINI_API_KEY,
+                # vertex_project=VERTEXAI_PROJECT,
+                # vertex_location="us-central1",
+                 vertex_credentials=MEDLM_PROJECT_JSON)
+    # gemini = dspy.GoogleVertexAI(
+    #           model_name=MODEL_ENDPOINT,
+    #           project=VERTEXAI_PROJECT,
+    #           location="us-central1",  # Match deployment region
+    #           credentials=MEDLM_PROJECT_JSON)
+    #
+    # gemini = dspy.GoogleVertexAI(
+    #     model="gemini-2.0-flash",
+    #     project=VERTEXAI_PROJECT,
+    #     location="us-central1",
+    #     credentials=MEDLM_PROJECT_JSON
+    #     )
+    dspy.configure(lm=gemini, max_tokens=8192, temperature=0.7, top_k=5)
 
 def load_gemini_vertexai_lm():
     print("loading gemini vertex ai")
