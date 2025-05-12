@@ -407,15 +407,44 @@ Sbp: 130.0
 
  Sugar_after_meal: Null
 """
-response = requests.post(
-    "http://127.0.0.1:8000/predict",
-    json={"model_name": "gemini-2.0-flash-001", "case": patient_case_5, "prompt_version": 2 }
+# EARLIER /predict endpoint
+# response = requests.post(
+#     "http://127.0.0.1:8000/predict",
+#     json={"model_name": "gemini-2.0-flash", "case": patient_case_3, "prompt_version": 1 }
+# )
+
+# if response.status_code == 200:
+#     formatted_json = json.dumps(response.json(), indent=4)
+#     print(formatted_json)
+# else:
+#     print(f"Error: {response.status_code}")
+#     print(response.text)
+
+# Test case for predict/v1 endpoint
+print("\n\nTesting /predict/v1 endpoint:")
+response_v1 = requests.post(
+    "http://127.0.0.1:8000/predict/v1",
+    json={"model_name": "gemini-2.0-flash", "case": patient_case_3}
 )
 
-if response.status_code == 200:
-    formatted_json = json.dumps(response.json(), indent=4)
+if response_v1.status_code == 200:
+    formatted_json = json.dumps(response_v1.json(), indent=4)
     print(formatted_json)
 else:
-    print(f"Error: {response.status_code}")
-    print(response.text)
+    print(f"Error: {response_v1.status_code}")
+    print(response_v1.text)
+
+# Test case for predict/v2 endpoint
+print("\n\nTesting /predict/v2 endpoint:")
+response_v2 = requests.post(
+    "http://127.0.0.1:8000/predict/v2",
+    json={"model_name": "gemini-2.0-flash-001", "case": patient_case_4}
+)
+
+if response_v2.status_code == 200:
+    formatted_json = json.dumps(response_v2.json(), indent=4)
+    print(formatted_json)
+else:
+    print(f"Error: {response_v2.status_code}")
+    print(response_v2.text)
 
