@@ -54,20 +54,16 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
                 "diagnosis": "diagnosis name",
                 "rationale": [
                     {{
-                        "category": "Clinical Relevance and Features",
-                        "content": "detailed explanation of clinical features"
+                        "Clinical Relevance and Features": "detailed explanation of clinical features"
                     }},
                     {{
-                        "category": "Lack of Fit Reasoning",
-                        "content": "explanation of why this diagnosis might not fit"
+                        "Lack of Fit Reasoning": "explanation of why this diagnosis might not fit"
                     }},
                     {{
-                        "category": "Relevance to Rural India",
-                        "content": "explanation of rural context if applicable"
+                        "Relevance to Rural India": "explanation of rural context if applicable"
                     }},
                     {{
-                        "category": "Clinical Relevance",
-                        "content": "general medical explanation"
+                        "Clinical Relevance": "general medical explanation"
                     }}
                 ],
                 "likelihood": "likelihood score"
@@ -80,12 +76,12 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
     For each diagnosis in the input:
     - diagnosis: The name of the diagnosis
     - rationales: A list of rationale objects, each containing:
-        * category: The category of the rationale. Common categories are:
+        * any of these fields below:
             - "Clinical Relevance and Features": Details about how symptoms match the diagnosis
             - "Lack of Fit Reasoning": Why certain symptoms or factors make the diagnosis less likely
             - "Relevance to Rural India": Context specific to rural healthcare settings
             - "Clinical Relevance": General medical explanation of the condition
-        * content: The detailed explanation for that category
+        * each field will have the detailed explanation for that field
     - likelihood: The likelihood score (High, Moderate-High, Moderate, Low-Moderate, Low)
 
     The conclusion should be a concise summary of the most likely diagnoses and key considerations.
