@@ -70,7 +70,8 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
             }},
             ...
         ],
-        "conclusion": "conclusion text"
+        "conclusion": "conclusion text",
+        "further_questions": "further questions to ask the patient"
     }}
 
     For each diagnosis in the input:
@@ -83,8 +84,6 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
             - "Clinical Relevance": General medical explanation of the condition
         * each field will have the detailed explanation for that field
     - likelihood: The likelihood score (High, Moderate-High, Moderate, Low-Moderate, Low)
-
-    The conclusion should be a concise summary of the most likely diagnoses and key considerations.
     
     Note: Break down any multi-line rationales into separate rationale objects by category. Include "Lack of Fit Reasoning" when the diagnosis is less likely or when there are factors that make it less probable.
     """
