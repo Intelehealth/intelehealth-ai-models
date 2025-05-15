@@ -4,6 +4,7 @@ from past_patients_visit import get_patient_data
 from google import genai
 import os, sys
 import pandas as pd
+from tqdm import tqdm
 
 
 from dotenv import load_dotenv
@@ -18,7 +19,7 @@ client = genai.Client(api_key=GEMINI_API_KEY)
  
 # Define the model you are going to use
 model_id =  "gemini-2.0-flash" # or "gemini-2.0-flash-lite-preview-02-05"  , "gemini-2.0-pro-exp-02-05"
-template = "This is ABC 👩🏽, a 27-year-old from Nasik, Maharashtra🇮🇳, living at 444, Kathe Lane. She was born on August 6, 1997🎂, and can be reached at 9876543210. Muskan first visited us a few months ago with complaints of recurring headaches and fatigue, which we traced to stress and mild anemia. On her second visit, she reported dizziness and nausea, so we adjusted her treatment with a nutritional plan and supplements."
+template = "This is ABC 👩🏽, a 27-year-old from Nasik, Maharashtra🇮🇳. Muskan first visited us a few months ago with complaints of recurring headaches and fatigue, which we traced to stress and mild anemia. On her second visit, she reported dizziness and nausea, so we adjusted her treatment with a nutritional plan and supplements."
 
 # Read the CSV file
 csv_file_path = '../data/Unified_Patient_Data.csv'
@@ -41,19 +42,30 @@ patient_ids = df['Patient_id'].unique()
 patient_stories = []
 
 # Process each patient
-for patient_id in patient_ids:
+for patient_id in tqdm(patient_ids, desc="Processing patients"):
     patient_data = get_patient_data(patient_id)
 
     if patient_data:  # Only process if we got valid data
         prompt = ("""
-        Using the patient_data provided, generate a story for this patient similar to the given template below.
+        Using the patient_data provided, generate a story for this patient in an empathetic tone and manner highlighting the patient's converstions with the healthworker and the challenges they faced for the doctor in a userful and helpful manner.
+
+        Start the story similar to this template:
         {template}
 
         Patient Data: {patient_data}.
 
-        Also, ensure follow up date is mentioned for the patient in the story. Also, if there are contact numbers and details, mention them in the story. Ensure all demographic details of the patient and nature of work if any are mentioned in the story.
+        Patient story should include the following:
+        - Current consultation reason.
+        - Past visit details.
+        - Risk details from all the previous visits.
+        - 2,3 points of human touch: name, age, occupation, family members
+
+        Also, ensure follow up date is mentioned for the patient in the story.
+        If any medications were prescribed in a visit, do mention them in the story.
 
         Please do not include any other information outside this patient data provided and do not hallucinate.
+        Do not inlcude sentences in any other language other than English. 
+        Do not include lines at the start of the story like - Here is a story for this patient, generated from the provided data in an empathetic tone.
         """).format(
             template=template,
             patient_data=patient_data
@@ -61,20 +73,34 @@ for patient_id in patient_ids:
 
         try:
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                # model="gemini-2.0-flash",
+                model="gemini-2.5-flash-preview-04-17",
                 contents=prompt,
             )
+            story_text = response.text
+            line_count = len(story_text.splitlines())
+            word_count = len(story_text.split())
+
             print(f"\nStory for Patient ID {patient_id}:")
-            print(response.text)
+            print(story_text)
+            print(f"Line Count: {line_count}")
+            print(f"Word Count: {word_count}")
             print("-" * 80)  # Separator between stories
             # Save the response to the list
-            patient_stories.append({"Patient ID": patient_id, "Story": response.text})
+            patient_stories.append({
+                "Patient ID": patient_id,
+                "Story": story_text,
+                "Line Count": line_count,
+                "Word Count": word_count,
+                "Prompt": prompt,
+                "Patient Data": patient_data
+            })
         except Exception as e:
             print(f"Error generating story for patient {patient_id}: {e}")
             continue
 
 # Save all patient stories to a CSV file
-output_csv_path = '../data/patient_stories_trial3.csv'
+output_csv_path = '../data/patient_story_generation_evals_13.csv'
 pd.DataFrame(patient_stories).to_csv(output_csv_path, index=False)
 print(f"Patient stories saved to {output_csv_path}")
 
