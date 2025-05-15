@@ -71,7 +71,14 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
             ...
         ],
         "conclusion": "conclusion text",
-        "further_questions": "further questions to ask the patient"
+        "further_questions": [
+        {{
+            1: "example question 1?"
+        }},
+        {{
+            2: "example question 2?"
+
+        }}]
     }}
 
     For each diagnosis in the input:
@@ -85,6 +92,10 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
         * each field will have the detailed explanation for that field
     - likelihood: The likelihood score (High, Moderate-High, Moderate, Low-Moderate, Low)
     
+    For the further_questions field break the string into a list of questions with each item in the list being a question.
+    - each key is the question number
+    - each value is the question
+
     Note: Break down any multi-line rationales into separate rationale objects by category. Include "Lack of Fit Reasoning" when the diagnosis is less likely or when there are factors that make it less probable.
     """
 
