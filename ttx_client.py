@@ -225,7 +225,7 @@ def process_medications(medication_text):
     
     return medications
 
-def get_treatment_recommendations_v1(patient_case, diagnosis, api_url="http://127.0.0.1:8000/ttx/v1", model="gemini-2.0-flash"):
+def get_treatment_recommendations_v1(patient_case, diagnosis, api_url="http://127.0.0.1:8000/ttx/v1", model="gemini-2.5-flash-preview-04-17"):
     """
     Get treatment recommendations from the TTX API v1
     
@@ -254,8 +254,11 @@ def get_treatment_recommendations_v1(patient_case, diagnosis, api_url="http://12
         
         if response.status_code == 200:
             result = response.json()
-            if "medications" in result:
-                result["medications"] = process_medications(result["medications"])
+            print("------------RESULT --------------------")
+            print(result)
+            print("--------------------------------")
+            # if "medications" in result:
+            #     result["medications"] = process_medications(result["medications"])
         else:
             result["error"] = f"API error: {response.status_code} - {response.text}"
     except Exception as e:
@@ -386,10 +389,10 @@ def get_treatment_recommendations(patient_case, diagnosis, api_url="http://127.0
     Returns:
         dict: Dictionary with treatment recommendations
     """
-    if version == "v2":
-        return get_treatment_recommendations_v2(patient_case, diagnosis, api_url, model)
-    else:
-        return get_treatment_recommendations_v1(patient_case, diagnosis, api_url, model)
+    # if version == "v2":
+    #     return get_treatment_recommendations_v2(patient_case, diagnosis, api_url, model)
+    # else:
+    return get_treatment_recommendations_v1(patient_case, diagnosis, api_url, model)
 
 if __name__ == "__main__":
     # Example patient case
@@ -488,9 +491,9 @@ if __name__ == "__main__":
     print("Getting treatment recommendations from v1...")
     result_v1 = get_treatment_recommendations_v1(patient_test_case, diagnosis)
     
-    # Get recommendations from v2
-    print("\nGetting treatment recommendations from v2...")
-    result_v2 = get_treatment_recommendations_v2(patient_test_case, diagnosis)
+    # # Get recommendations from v2
+    # print("\nGetting treatment recommendations from v2...")
+    # result_v2 = get_treatment_recommendations_v2(patient_test_case, diagnosis)
     
     # Print v1 results
     if result_v1["success"]:
@@ -500,11 +503,11 @@ if __name__ == "__main__":
         print(f"\nV1 Error: {result_v1.get('error', 'Unknown error')}")
     
     # Print v2 results
-    if result_v2["success"]:
-        print("\nV2 Results:")
-        print(json.dumps(result_v2, indent=2))
-    else:
-        print(f"\nV2 Error: {result_v2.get('error', 'Unknown error')}")
+    # if result_v2["success"]:
+    #     print("\nV2 Results:")
+    #     print(json.dumps(result_v2, indent=2))
+    # else:
+    #     print(f"\nV2 Error: {result_v2.get('error', 'Unknown error')}")
 
 
 
