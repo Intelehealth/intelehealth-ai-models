@@ -318,18 +318,29 @@ def load_gemini_2_5_vertex_lm():
     dspy.settings.configure(lm=gemini, temperature=0.1)
 
 def load_gemini_vertex_finetuned_lm():
-    gemini = dspy.LM(
-                model=MODEL_ENDPOINT,
-                base_model="vertex_ai/gemini/gemini-2.0-flash",
-                api_key=GEMINI_API_KEY,
-                # vertex_project=VERTEXAI_PROJECT,
-                # vertex_location="us-central1",
-                 vertex_credentials=MEDLM_PROJECT_JSON)
+    # gemini = dspy.LM(
+    #             model="openai/top1-ddx",
+    #             base_model="vertex_ai/gemini-2.0-flash",
+    #             api_base="https://generativelanguage.googleapis.com/v1beta/openai/",
+    #             api_key=GEMINI_API_KEY,
+    #             vertex_project=VERTEXAI_PROJECT,
+    #             vertex_location="us-central1",
+    #              vertex_credentials=MEDLM_PROJECT_JSON)
     # gemini = dspy.GoogleVertexAI(
-    #           model_name=MODEL_ENDPOINT,
+    #         #   model_name=MODEL_ENDPOINT,
+    #           model_name="vertex_ai/top1-ddx",
+    #           api_key=GEMINI_API_KEY,
     #           project=VERTEXAI_PROJECT,
     #           location="us-central1",  # Match deployment region
     #           credentials=MEDLM_PROJECT_JSON)
+    
+    gemini = dspy.LM(
+            model="vertex_ai/gemini/top1-ddx",
+            base_model="vertex_ai/gemini/gemini-2.0-flash",
+            api_key=GEMINI_API_KEY,
+            project=VERTEXAI_PROJECT,
+            location="us-central1",  # Match deployment region
+            vertex_credentials=MEDLM_PROJECT_JSON)
     #
     # gemini = dspy.GoogleVertexAI(
     #     model="gemini-2.0-flash",
@@ -337,7 +348,7 @@ def load_gemini_vertex_finetuned_lm():
     #     location="us-central1",
     #     credentials=MEDLM_PROJECT_JSON
     #     )
-    dspy.configure(lm=gemini, max_tokens=8192, temperature=0.7, top_k=5)
+    dspy.configure(lm=gemini, max_tokens=8192, temperature=1.0, top_k=5)
 
 def load_gemini_vertexai_lm():
     print("loading gemini vertex ai")
@@ -356,6 +367,10 @@ def load_gemini_vertexai_lm():
 
 def load_open_ai_lm():
     lm = dspy.LM('openai/gpt-4o', api_key=OPENAI_API_KEY, temperature=1.0)
+    dspy.configure(lm=lm, top_k=5)
+
+def load_open_ai_lm_4_1():
+    lm = dspy.LM('openai/gpt-4.1', api_key=OPENAI_API_KEY, temperature=1.0)
     dspy.configure(lm=lm, top_k=5)
 
 def load_open_ai_o1_mini_lm():

@@ -1,6 +1,7 @@
 import dspy
 from utils import prepare_ddx_data
-from utils.metric_utils import openai_llm_judge, openai_llm_reasoning_judge, load_gemini2_lm, load_gemini2_5_lm, load_gemini_vertex_finetuned_lm, load_gemini_2_5_vertex_lm, load_gemini2_5_lm_1
+from utils.metric_utils import openai_llm_reasoning_judge, load_gemini2_lm, load_gemini2_5_lm, load_gemini_vertex_finetuned_lm, \
+      load_gemini_2_5_vertex_lm, load_gemini2_5_lm_1, load_open_ai_lm, load_open_ai_lm_4_1
 import os
 import random
 from dotenv import load_dotenv
@@ -36,7 +37,7 @@ from datetime import datetime
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Run differential diagnosis with specified parameters')
-parser.add_argument('--llm', type=str, choices=['openai', 'gemini', 'gemini2', 'gemini_vertex_finetuned' , 'gemini_2_5_flash_vertex'], required=True,
+parser.add_argument('--llm', type=str, choices=['openai', 'openai_4_1', 'gemini', 'gemini2', 'gemini_vertex_finetuned' , 'gemini_2_5_flash_vertex'], required=True,
                    help='LLM to use (openai or gemini)')
 parser.add_argument('--num_trials', type=int, default=2,
                    help='Number of trials to run (default: 2)')
@@ -52,6 +53,10 @@ elif args.llm == 'gemini_vertex_finetuned':
     load_gemini_vertex_finetuned_lm()
 elif args.llm == 'gemini_2_5_flash_vertex':
     load_gemini_2_5_vertex_lm()
+elif args.llm == 'openai':
+    load_open_ai_lm()
+elif args.llm == 'openai_4_1':
+    load_open_ai_lm_4_1()
 
 # Get current datetime for filename
 current_datetime = datetime.now().strftime("%d_%m_%Y_%H_%M")
