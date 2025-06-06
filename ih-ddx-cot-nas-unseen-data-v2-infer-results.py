@@ -1,7 +1,8 @@
 import dspy
 from utils.metric_utils import load_gemini2_lm, load_gemini2_5_lm_1, \
     metric_fun, openai_llm_judge, load_gemini_lm, load_open_ai_lm, \
-        load_hyperbolic_llama_3_1, load_open_ai_o1_mini_lm, load_open_ai_lm_4_1
+    load_hyperbolic_llama_3_3_70b_instruct, load_open_ai_o1_mini_lm, load_open_ai_lm_4_1, \
+    load_gemini_2_5_pro_lm, load_lm_studio_medgemma_27b_text_it, load_gemini_2_5_vertex_lm
 from dotenv import load_dotenv
 import pandas as pd
 import argparse
@@ -11,6 +12,7 @@ from modules.DDxModule import DDxModule
 from modules.TelemedicineDDxModule import TelemedicineDDxModule
 from modules.TelemedicineTenDDxModule import TelemedicineTenDDxModule
 from modules.DDxKBModule import DDxKBModule
+from modules.TelemedicineICD11DDxModule import TelemedicineICD11DDxModule
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='Run differential diagnosis inference on NAS unseen data')
@@ -18,7 +20,7 @@ parser.add_argument('--input_csv', type=str, required=True,
                     help='Input CSV file containing the patient data')
 parser.add_argument('--output_csv', type=str, required=True,
                     help='Output CSV file to save the results')
-parser.add_argument('--model', type=str, choices=['gemini2', 'openai', 'openai_4_1', 'llama', 'gemini2_5'], default='gemini2',
+parser.add_argument('--model', type=str, choices=['gemini2', 'openai', 'openai_4_1', 'llama', 'gemini2_5', 'gemini_2_5_pro', 'medgemma-27-it', 'gemini_2_5_vertex'], default='gemini2',
                     help='LLM model to use')
 parser.add_argument('--trained_file', type=str, required=True,
                     help='Trained model file to load')
@@ -35,14 +37,22 @@ if args.model == 'gemini2':
     load_gemini2_lm()
 elif args.model == 'gemini2_5':
     load_gemini2_5_lm_1()
+elif args.model == 'gemini_2_5_pro':
+    load_gemini_2_5_pro_lm()
 elif args.model == 'openai':
     load_open_ai_lm()
 elif args.model == 'gemini':
     load_gemini_lm()
 elif args.model == 'llama':
-    load_hyperbolic_llama_3_1()
+    load_hyperbolic_llama_3_3_70b_instruct()
 elif args.model == 'openai_4_1':
     load_open_ai_lm_4_1()
+elif args.model == 'medgemma-27-it':
+    load_lm_studio_medgemma_27b_text_it()
+elif args.model == 'gemini_2_5_pro':
+    load_gemini_2_5_pro_lm()
+elif args.model == 'gemini_2_5_vertex':
+    load_gemini_2_5_vertex_lm()
 
 cot = ""
 df = pd.read_csv(args.input_csv)
@@ -88,6 +98,20 @@ elif args.module == 'telemedicine_ten':
 
         Keep all responses concise and to the point.
     """
+elif args.module == 'telemedicine_icd_11':
+    cot = TelemedicineICD11DDxModule()
+    question = """
+        Your role is to act as a doctor conducting a telemedicine consultation with a patient in rural India.
+        Based on patient history, symptoms, physical exam findings, and demographics:
+        1. Provide the top 5 differential diagnoses, with highest confidence ranked in order of likelihood, picked from the ICD-11 database.
+        2. Ensure diagnoses are relevant to a telemedicine context in India.
+        3. For each diagnosis: include a brief rationale.
+        4. Exclude diagnoses from the following ICD-11 chapters:
+            - Chapter 20 to 26
+            - Chapter V
+            - Chapter X
+        Keep all responses concise and to the point.
+    """
 elif args.module =='ddx':
     cot = DDxModule()
     question = "You are a doctor with the following patient from rural India. Here is their case with the history of presenting illness, their physical exams, and demographics. What would be the top 5 differential diagnosis for this patient? For each diagnosis, include the likelihood score and the brief rationale for that diagnosis. For high to moderate likelihood diagnosis under the rationale mention the clinical relevance and features, any recent infection or preceeding infection, and relevance to rural india. For a low likelihood diagnosis, include lack of fit reasoning under the rationale for that diagnosis. Please rank the differential diagnoses based on the likelihood and provide a brief explanation for each diagnosis. Please don't include  CASE and Question in the rationale.Please remember this is a patient in rural India and use this as a consideration for the diseases likely for the patient."
@@ -98,7 +122,7 @@ cot.load("outputs/" + args.trained_file)
 
 def receive_new_data(new_df):
     for index,row in new_df[:].iterrows():
-        # if index < 133:
+        # if index < 173:
         #     continue
         # else:
             print("############################################")
