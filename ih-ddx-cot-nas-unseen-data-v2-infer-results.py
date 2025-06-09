@@ -24,7 +24,7 @@ parser.add_argument('--model', type=str, choices=['gemini2', 'openai', 'openai_4
                     help='LLM model to use')
 parser.add_argument('--trained_file', type=str, required=True,
                     help='Trained model file to load')
-parser.add_argument('--module', type=str, choices=['ddx', 'telemedicine', 'icd_snowmed_kb', 'telemedicine_ten'], default='ddx',
+parser.add_argument('--module', type=str, choices=['ddx', 'telemedicine', 'icd_snowmed_kb', 'telemedicine_ten', 'telemedicine_icd_11'], default='ddx',
                     help='Module type to use (ddx or telemedicine)')
 args = parser.parse_args()
 
@@ -149,6 +149,17 @@ def receive_new_data(new_df):
                     "LLM_diagnosis": "",
                     "LLM_rationale": ""
                 }
+            elif args.module == 'telemedicine_icd_11':
+                resp = {
+                    "case_id": case_id,
+                    "patient_case": patient_case,
+                    "gt_diagnosis": gt_diagnosis,
+                    "LLM_diagnosis": "",
+                    "LLM_conclusion": "",
+                    "further_questions": "",
+                    "follow_up_recommendations": ""
+
+                }
             else:
                 resp = {
                     "case_id": case_id,
@@ -160,14 +171,38 @@ def receive_new_data(new_df):
             
             try:
                 output = cot(case=patient_case, question=question)
-                print("diagnosis: ", output.output.diagnosis)
+                
+                diagnosis_text = output.output.diagnosis
+
+                if "diagnosis=" in diagnosis_text:
+                    diagnosis_text = diagnosis_text.split("diagnosis=")[-1]
+                elif "diagnosis:" in diagnosis_text:
+                    diagnosis_text = diagnosis_text.split("diagnosis:")[-1]
+
+                if '\n\n' in diagnosis_text:
+                    parts = diagnosis_text.split('\n\n', 1)
+                    if len(parts) > 1 and parts[1].lstrip().startswith('1.'):
+                        diagnosis_text = parts[1]
+
+                diagnosis_text = diagnosis_text.strip()
+                if diagnosis_text.startswith("'") and diagnosis_text.endswith("'"):
+                    diagnosis_text = diagnosis_text[1:-1]
+                if diagnosis_text.startswith('"') and diagnosis_text.endswith('"'):
+                    diagnosis_text = diagnosis_text[1:-1]
+
+                print("diagnosis: ", diagnosis_text)
                 
                 # Set basic fields that exist in both modules
-                resp["LLM_diagnosis"] = output.output.diagnosis 
+                resp["LLM_diagnosis"] = diagnosis_text
+                
 
                 # Set additional fields for telemedicine module
                 if args.module == 'telemedicine' or args.module == 'icd_snowmed_kb':
                     resp["LLM_rationale"] = output.output.rationale
+                    resp["further_questions"] = output.output.further_questions
+                    resp["follow_up_recommendations"] = output.output.follow_up_recommendations
+                elif args.module == 'telemedicine_icd_11':
+                    resp["LLM_conclusion"] = output.output.conclusion
                     resp["further_questions"] = output.output.further_questions
                     resp["follow_up_recommendations"] = output.output.follow_up_recommendations
                 elif args.module == 'telemedicine_ten':
