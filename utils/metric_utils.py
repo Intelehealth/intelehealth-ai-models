@@ -25,6 +25,10 @@ HYPERBOLIC_API_BASE = os.getenv("HYPERBOLIC_API_BASE")
 MEDLM_PROJECT_JSON = os.getenv("MEDLM_PROJECT_JSON")
 VERTEXAI_PROJECT = os.getenv("VERTEXAI_PROJECT")
 MODEL_ENDPOINT = os.getenv("MODEL_ENDPOINT")
+AWS_REGION_NAME = os.getenv("AWS_REGION_NAME")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID")
 
 client = OpenAI(
   api_key = OPENAI_API_KEY,
@@ -278,8 +282,8 @@ def load_groq_llama_3_1():
     llama = dspy.GROQ(model="llama-3.1-8b-instant", api_key = GROQ_API_KEY)
     dspy.settings.configure(lm=llama, max_tokens=10000, top_k=3)
 
-def load_hyperbolic_llama_3_1():
-    lm = dspy.LM('openai/meta-llama/Llama-3.3-70B-Instruct', api_key=HYPERBOLIC_API_KEY, api_base=HYPERBOLIC_API_BASE)
+def load_hyperbolic_llama_3_3_70b_instruct():
+    lm = dspy.LM('openai/meta-llama/Llama-3.2-11B-Vision-Instruct', api_key=HYPERBOLIC_API_KEY, api_base=HYPERBOLIC_API_BASE)
     dspy.configure(lm=lm, max_tokens=10000, top_k=5)
 
 def load_gemini_lm():
@@ -303,6 +307,11 @@ def load_gemini2_5_lm():
 def load_gemini2_5_lm_1():
     gemini = dspy.LM("openai/gemini-2.5-flash-preview-04-17", api_key=GEMINI_API_KEY,
                      api_base="https://generativelanguage.googleapis.com/v1beta/openai/",
+                     max_tokens=50000)
+    dspy.settings.configure(lm=gemini, top_k=5)
+
+def load_gemini_2_5_pro_lm():
+    gemini = dspy.LM("openai/gemini-2.5-pro-preview-05-06", api_key=GEMINI_API_KEY, api_base="https://generativelanguage.googleapis.com/v1beta/openai/",
                      max_tokens=50000)
     dspy.settings.configure(lm=gemini, top_k=5)
 
@@ -438,3 +447,21 @@ def load_lm_studio_qwen_qwq_32b():
 def load_lm_studio_qwen_merged_3b_grpo():
     lm = dspy.LM('lm_studio/Qwen2.5-3B-Instruct-Qlora-GGUF', api_base='http://localhost:1234/v1', api_key='', model_type="chat", temperature=1.0)
     dspy.configure(lm=lm, top_k=5)
+
+def load_lm_studio_medgemma_27b_text_it():
+    lm = dspy.LM(model="openai/google/medgemma-27b-text-it", api_base='http://localhost:1234/v1/', api_key="local", model_type="chat", temperature=1.0)
+    dspy.configure(lm=lm, top_k=5)
+
+def load_aws_bedrock_lm():
+    """Configures DSPy to use AWS Bedrock with credentials from environment variables."""
+    if not BEDROCK_MODEL_ID:
+        raise ValueError("BEDROCK_MODEL_ID environment variable not set.")
+    # litellm, used by dspy.LM, will automatically pick up AWS credentials
+    # from environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION_NAME)
+    # or from ~/.aws/credentials if they are set.
+
+    bedrock_lm = dspy.LM(
+        model=f"bedrock/{BEDROCK_MODEL_ID}"
+    )
+    dspy.settings.configure(lm=bedrock_lm, max_tokens=4096, temperature=1.0)
+    print(f"DSPy configured to use AWS Bedrock model: {BEDROCK_MODEL_ID}")

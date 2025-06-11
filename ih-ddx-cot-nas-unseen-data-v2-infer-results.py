@@ -2,7 +2,7 @@ import dspy
 from utils.metric_utils import load_gemini2_lm, load_gemini2_5_lm_1, \
     metric_fun, openai_llm_judge, load_gemini_lm, load_open_ai_lm, \
     load_hyperbolic_llama_3_3_70b_instruct, load_open_ai_o1_mini_lm, load_open_ai_lm_4_1, \
-    load_gemini_2_5_pro_lm, load_lm_studio_medgemma_27b_text_it, load_gemini_2_5_vertex_lm
+    load_gemini_2_5_pro_lm, load_lm_studio_medgemma_27b_text_it, load_gemini_2_5_vertex_lm, load_aws_bedrock_lm
 from dotenv import load_dotenv
 import pandas as pd
 import argparse
@@ -20,7 +20,7 @@ parser.add_argument('--input_csv', type=str, required=True,
                     help='Input CSV file containing the patient data')
 parser.add_argument('--output_csv', type=str, required=True,
                     help='Output CSV file to save the results')
-parser.add_argument('--model', type=str, choices=['gemini2', 'openai', 'openai_4_1', 'llama', 'gemini2_5', 'gemini_2_5_pro', 'medgemma-27-it', 'gemini_2_5_vertex'], default='gemini2',
+parser.add_argument('--model', type=str, choices=['gemini2', 'openai', 'openai_4_1', 'llama', 'gemini2_5', 'gemini_2_5_pro', 'medgemma-27-it', 'gemini_2_5_vertex', 'aws_bedrock_llama_3_2_11b'], default='gemini2',
                     help='LLM model to use')
 parser.add_argument('--trained_file', type=str, required=True,
                     help='Trained model file to load')
@@ -53,6 +53,8 @@ elif args.model == 'gemini_2_5_pro':
     load_gemini_2_5_pro_lm()
 elif args.model == 'gemini_2_5_vertex':
     load_gemini_2_5_vertex_lm()
+elif args.model == 'aws_bedrock_llama_3_2_11b':
+    load_aws_bedrock_lm()
 
 cot = ""
 df = pd.read_csv(args.input_csv)
@@ -138,6 +140,7 @@ def receive_new_data(new_df):
                     "gt_diagnosis": gt_diagnosis,
                     "LLM_diagnosis": "",
                     "LLM_rationale": "",
+                    "LLM_conclusion": "",
                     "further_questions": "",
                     "follow_up_recommendations": ""
                 }
@@ -201,6 +204,7 @@ def receive_new_data(new_df):
                     resp["LLM_rationale"] = output.output.rationale
                     resp["further_questions"] = output.output.further_questions
                     resp["follow_up_recommendations"] = output.output.follow_up_recommendations
+                    resp["LLM_conclusion"] = output.output.conclusion
                 elif args.module == 'telemedicine_icd_11':
                     resp["LLM_conclusion"] = output.output.conclusion
                     resp["further_questions"] = output.output.further_questions
@@ -215,6 +219,7 @@ def receive_new_data(new_df):
                     resp["LLM_rationale"] = ""
                     resp["further_questions"] = ""
                     resp["follow_up_recommendations"] = ""
+                    resp["LLM_conclusion"] = ""
                 elif args.module == 'telemedicine_ten':
                     resp["further_questions"] = ""
                     resp["follow_up_recommendations"] = ""
