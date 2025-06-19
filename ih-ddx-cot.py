@@ -14,6 +14,7 @@ from modules.TelemedicineTenDDxModule import TelemedicineTenDDxModule
 from modules.DDxKBModule import DDxKBModule
 from modules.TelemedicineDDxModuleRAG import TelemedicineDDxModuleRAG
 from modules.TelemedicineICD11DDxModule import TelemedicineICD11DDxModule
+from modules.TelemedicineSnomedCTDDxModule import TelemedicineSnomedCTDDxModule
 
 load_dotenv(
     "ops/.env"
@@ -44,7 +45,7 @@ parser.add_argument('--llm', type=str, choices=['openai', 'openai_4_1', 'gemini'
                    help='LLM to use (openai or gemini)')
 parser.add_argument('--num_trials', type=int, default=2,
                    help='Number of trials to run (default: 2)')
-parser.add_argument('--module', type=str, choices=['TelemedicineDDxModule', 'DDxModule', 'DDxLocalModule', 'TelemedicineTenDDxModule', 'DDxKBModule', 'TelemedicineDDxModuleRAG', 'TelemedicineICD11DDxModule'], default='TelemedicineDDxModule',
+parser.add_argument('--module', type=str, choices=['TelemedicineDDxModule', 'DDxModule', 'DDxLocalModule', 'TelemedicineTenDDxModule', 'DDxKBModule', 'TelemedicineDDxModuleRAG', 'TelemedicineICD11DDxModule', 'TelemedicineSnomedCTDDxModule'], default='TelemedicineDDxModule',
                    help='Module to use for differential diagnosis (default: TelemedicineDDxModule)')
 args = parser.parse_args()
 
@@ -93,6 +94,8 @@ elif args.module == 'TelemedicineDDxModuleRAG':
     module_to_compile = TelemedicineDDxModuleRAG()
 elif args.module == 'TelemedicineICD11DDxModule':
     module_to_compile = TelemedicineICD11DDxModule()
+elif args.module == 'TelemedicineSnomedCTDDxModule':
+    module_to_compile = TelemedicineSnomedCTDDxModule()
 else:  # Default to TelemedicineDDxModule
     module_to_compile = TelemedicineDDxModule()
 

@@ -13,6 +13,7 @@ from modules.TelemedicineDDxModule import TelemedicineDDxModule
 from modules.TelemedicineTenDDxModule import TelemedicineTenDDxModule
 from modules.DDxKBModule import DDxKBModule
 from modules.TelemedicineICD11DDxModule import TelemedicineICD11DDxModule
+from modules.TelemedicineSnomedCTDDxModule import TelemedicineSnomedCTDDxModule
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='Run differential diagnosis inference on NAS unseen data')
@@ -24,7 +25,7 @@ parser.add_argument('--model', type=str, choices=['gemini2', 'openai', 'openai_4
                     help='LLM model to use')
 parser.add_argument('--trained_file', type=str, required=True,
                     help='Trained model file to load')
-parser.add_argument('--module', type=str, choices=['ddx', 'telemedicine', 'icd_snowmed_kb', 'telemedicine_ten', 'telemedicine_icd_11'], default='ddx',
+parser.add_argument('--module', type=str, choices=['ddx', 'telemedicine', 'icd_snowmed_kb', 'telemedicine_ten', 'telemedicine_icd_11', 'telemedicine_snomed_ct'], default='ddx',
                     help='Module type to use (ddx or telemedicine)')
 args = parser.parse_args()
 
@@ -117,6 +118,18 @@ elif args.module == 'telemedicine_icd_11':
 elif args.module =='ddx':
     cot = DDxModule()
     question = "You are a doctor with the following patient from rural India. Here is their case with the history of presenting illness, their physical exams, and demographics. What would be the top 5 differential diagnosis for this patient? For each diagnosis, include the likelihood score and the brief rationale for that diagnosis. For high to moderate likelihood diagnosis under the rationale mention the clinical relevance and features, any recent infection or preceeding infection, and relevance to rural india. For a low likelihood diagnosis, include lack of fit reasoning under the rationale for that diagnosis. Please rank the differential diagnoses based on the likelihood and provide a brief explanation for each diagnosis. Please don't include  CASE and Question in the rationale.Please remember this is a patient in rural India and use this as a consideration for the diseases likely for the patient."
+elif args.module == 'telemedicine_snomed_ct':
+    cot = TelemedicineSnomedCTDDxModule()
+    question = """
+        Your role is to act as a doctor conducting a telemedicine consultation with a patient in rural India.
+        Based on patient history, symptoms, physical exam findings, and demographics:
+        1. Provide the top 5 differential diagnoses, with highest confidence ranked in order of likelihood, picked from the snomed ct database.
+        2. Ensure diagnoses are relevant to a telemedicine context in India.
+        3. For each diagnosis: include a brief rationale and the confidence of prediction - high, moderate, low etc.
+        4. do not include any snomed ct codes in the response.
+
+        Keep all responses concise and to the point.
+    """
 else:
     question_1 = "You are a doctor with the following patient from rural India. Here is their case with the history of presenting illness, their physical exams, and demographics. What would be the top 5 differential diagnosis for this patient? For each diagnosis, include the likelihood score and a brief rationale focusing on the most relevant clinical features and relevance to a rural Indian context. Please rank the differential diagnoses based on the likelihood and provide a brief explanation for each diagnosis. DO NOT include case and question in the output anywhere. Keep rationale and conclusion very brief."
 
@@ -124,9 +137,9 @@ cot.load("outputs/" + args.trained_file)
 
 def receive_new_data(new_df):
     for index,row in new_df[:].iterrows():
-        # if index < 173:
-        #     continue
-        # else:
+        if index < 190:
+            continue
+        else:
             print("############################################")
             case_id = row["visit_id"]
             gt_diagnosis = row["Diagnosis"]
@@ -162,6 +175,16 @@ def receive_new_data(new_df):
                     "further_questions": "",
                     "follow_up_recommendations": ""
 
+                }
+            elif args.module == 'telemedicine_snomed_ct':
+                resp = {
+                    "case_id": case_id,
+                    "patient_case": patient_case,
+                    "gt_diagnosis": gt_diagnosis,
+                    "LLM_diagnosis": "",
+                    "LLM_conclusion": "",
+                    "further_questions": "",
+                    "follow_up_recommendations": ""
                 }
             else:
                 resp = {
@@ -212,7 +235,11 @@ def receive_new_data(new_df):
                 elif args.module == 'telemedicine_ten':
                     resp["further_questions"] = output.output.further_questions
                     resp["follow_up_recommendations"] = output.output.follow_up_recommendations
-
+                elif args.module == 'telemedicine_snomed_ct':
+                    resp["LLM_rationale"] = output.output.rationale
+                    resp["LLM_conclusion"] = output.output.conclusion
+                    resp["further_questions"] = output.output.further_questions
+                    resp["follow_up_recommendations"] = output.output.follow_up_recommendations
             except Exception as e:
                 # Set module-specific empty fields based on module type
                 if args.module == 'telemedicine':
