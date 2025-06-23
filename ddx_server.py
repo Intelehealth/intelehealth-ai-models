@@ -8,15 +8,36 @@ from modules.DDxMulModule import DDxMulModule
 from modules.TelemedicineDDxModule import TelemedicineDDxModule
 from google import genai
 import os
-
+import mlflow
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from prompt_config import prompt_config
+import logging
 
+# Enable debug logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv(
     "ops/.env"
 )
+
+# MLflow setup for tracking DSPy calls
+logger.info("Setting up MLflow for DSPy tracking...")
+# Set tracking URI to local file store with database backend
+import os
+os.makedirs("mlflow_data", exist_ok=True)
+mlflow.set_tracking_uri(f"sqlite:///{os.path.abspath('mlflow_data/mlflow.db')}")
+mlflow.set_experiment("ddx-server-tracking")
+mlflow.dspy.autolog(
+    log_traces=True,
+    log_traces_from_compile=True,
+    log_traces_from_eval=True,
+    log_compiles=True,
+    log_evals=True,
+    silent=False
+)
+logger.info("MLflow DSPy autologging configured successfully!")
 
 load_gemini2_lm()
 
@@ -24,11 +45,7 @@ load_gemini2_lm()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
-app = FastAPI(
-    title="Differential Diagnosis Server",
-    description="A simple API serving a DSPy Chain of Thought program for DDx",
-    version="1.0.0"
-)
+app = FastAPI()
 
 class BaseDDxRequest(BaseModel):
     case: str
@@ -52,6 +69,18 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
         "result": [
             {{
                 "diagnosis": "diagnosis name",
+                "summarised_rationale":
+                [
+                    {{
+                        "1": "summarised rationale line for the diagnosis in a crisp format from the rationale field limited to 1 line without losing relevance."
+                    }},
+                    {{
+                        "2": "summarised rationale line for the diagnosis in a crisp format from the rationale field limited to 1 line without losing relevance."
+                    }},
+                    {{
+                        "3": "summarised rationale line for the diagnosis in a crisp format from the rationale field limited to 1 line without losing relevance."
+                    }}
+                ]
                 "rationale": [
                     {{
                         "Clinical Relevance and Features": "detailed explanation of clinical features"
@@ -83,6 +112,7 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
 
     For each diagnosis in the input:
     - diagnosis: The name of the diagnosis
+    - summarised_rationale: A list of exactly 3 rationale points maximum, each being a single crisp line that summarizes key aspects of the diagnosis from the detailed rationale
     - rationales: A list of rationale objects, each containing:
         * any of these fields below:
             - "Clinical Relevance and Features": Details about how symptoms match the diagnosis
@@ -92,6 +122,8 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
         * each field will have the detailed explanation for that field
     - likelihood: The likelihood score (High, Moderate-High, Moderate, Low-Moderate, Low)
     
+    IMPORTANT: The summarised_rationale field must contain at most 3 lines ensuring clinical relevance is not lost. Each line should be concise and capture the most important aspects of the diagnosis rationale.
+
     For the further_questions field break the string into a list of questions with each item in the list being a question.
     - each key is the question number
     - each value is the question
@@ -104,6 +136,21 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
             model="gemini-2.0-flash",
             contents=transform_prompt,
         )
+        # Log the transformation request to MLflow
+        mlflow.log_param("transformation_model", "gemini-2.0-flash")
+        mlflow.log_param("transformation_prompt_length", len(transform_prompt))
+        
+        # Log the transformation prompt as an artifact
+        with open("transformation_prompt.txt", "w") as f:
+            f.write(transform_prompt)
+                # Log the raw transformation response
+        with open("raw_transformation_response.txt", "w") as f:
+            f.write(str(response))
+        mlflow.log_text(transform_prompt, "transformation_prompt.txt")
+        mlflow.log_text(str(response), "raw_transformation_response.txt")
+        
+        # Log transformation success metric
+        mlflow.log_metric("transformation_success", 1)
         print("response: -----")
         print(response)
         print("-----")
@@ -130,37 +177,100 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
 
 @app.post("/predict/v1")
 async def ddx_v1(request_body: DDxRequestV1):
-    cot = None
-    prompt = ""
-    if request_body.model_name == "gemini-2.0-flash":
-        cot = DDxModule()
-        cot.load("outputs/" + "10_02_2025_ddx_gemini2_only_num_trials_20_ayu_data_top_k5_single_diagnosis.json")
-        prompt = prompt_config[1]
-    else:
-        raise HTTPException(status_code=400, detail="Invalid model name for v1")
+    logger.info("Starting prediction request...")
 
-    dspy_program = dspy.asyncify(cot)
+    # Start MLflow run to track this prediction
+    with mlflow.start_run(run_name=f"ddx_prediction_{int(time.time())}"):
+        # Log request parameters
+        mlflow.log_param("model_name", request_body.model_name)
+        mlflow.log_param("case_length", len(request_body.case))
 
-    try:
-        print("prompt selected: ", prompt)
-        result = await dspy_program(case=request_body.case, question=prompt)
-        print(result)
-        if hasattr(result, 'output') and hasattr(result.output, 'diagnosis') and result.output.diagnosis == "NA":
-            print("no diagnosis possible")
-            return {
+        cot = None
+        prompt = ""
+        if request_body.model_name == "gemini-2.0-flash":
+            cot = DDxModule()
+            cot.load("outputs/" + "10_02_2025_ddx_gemini2_only_num_trials_20_ayu_data_top_k5_single_diagnosis.json")
+            # Create a new, fully-configured LM instance.
+            gemini_for_tracking = dspy.LM(
+                "gemini/gemini-2.0-flash",
+                api_key=GEMINI_API_KEY,
+                max_tokens=10000,
+                temperature=0.7,
+                top_k=5
+            )
+            # Get the current DSPy configuration to extract LLM parameters
+            current_lm = dspy.settings.lm
+            if hasattr(current_lm, 'model'):
+                mlflow.log_param("llm_model", current_lm.model)
+            if hasattr(current_lm, 'max_tokens'):
+                mlflow.log_param("llm_max_tokens", current_lm.max_tokens)
+            if hasattr(current_lm, 'temperature'):
+                mlflow.log_param("llm_temperature", current_lm.temperature)
+            if hasattr(current_lm, 'top_k'):
+                mlflow.log_param("llm_top_k", current_lm.top_k)
+            else:
+                # Fallback to default values if attributes not found
+                mlflow.log_param("llm_model", "gemini/gemini-2.0-flash")
+                mlflow.log_param("llm_max_tokens", 10000)
+                mlflow.log_param("llm_temperature", 0.7)
+                mlflow.log_param("llm_top_k", 5)
+
+            # Directly assign the configured LM to the predictor within the loaded module.
+            cot.generate_answer.llm = gemini_for_tracking
+
+            prompt = prompt_config[1]
+            mlflow.log_param("prompt_config_index", 1)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid model name for v1")
+
+        dspy_program = dspy.asyncify(cot)
+
+        try:
+            logger.info("About to call DSPy program...")
+            print("prompt selected: ", prompt)
+            # Log input data
+            mlflow.log_text(request_body.case, "input_case.txt")
+            mlflow.log_text(prompt, "prompt_used.txt")
+
+            result = await dspy_program(case=request_body.case, question=prompt)
+            logger.info("DSPy program completed!")
+            print(result)
+
+            # Log the raw result
+            mlflow.log_text(str(result), "raw_dspy_output.txt")
+
+            if hasattr(result, 'output') and hasattr(result.output, 'diagnosis') and result.output.diagnosis == "NA":
+                print("no diagnosis possible")
+                response_data = {
+                    "status": "success",
+                    "data": "The Input provided does not have enough clinical details for AI based assessment."
+                }
+                mlflow.log_text(str(response_data), "final_response.txt")
+                return response_data
+
+            # Transform the diagnosis output
+            transformed_output = await transform_diagnosis_output(result.toDict())
+
+            # Log the transformed output
+            mlflow.log_text(json.dumps(transformed_output, indent=2), "transformed_output.json")
+
+            response_data = {
                 "status": "success",
-                "data": "The Input provided does not have enough clinical details for AI based assessment."
+                "data": transformed_output
             }
 
-        # Transform the diagnosis output
-        transformed_output = await transform_diagnosis_output(result.toDict())
-        return {
-            "status": "success",
-            "data": transformed_output
-        }
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail="Internal Server Error. Please try again later.")
+            # Log final response
+            mlflow.log_text(json.dumps(response_data, indent=2), "final_response.json")
+            mlflow.log_metric("prediction_success", 1)
+
+            return response_data
+
+        except Exception as e:
+            logger.error(f"Error in prediction: {e}")
+            mlflow.log_param("error", str(e))
+            mlflow.log_metric("prediction_success", 0)
+            print(e)
+            raise HTTPException(status_code=500, detail="Internal Server Error. Please try again later.")
 
 
 @app.post("/predict/v2")
