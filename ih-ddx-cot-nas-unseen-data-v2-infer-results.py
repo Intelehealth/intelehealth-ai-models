@@ -127,6 +127,7 @@ elif args.module == 'telemedicine_snomed_ct':
         2. Ensure diagnoses are relevant to a telemedicine context in India.
         3. For each diagnosis: include a brief rationale and the confidence of prediction - high, moderate, low etc.
         4. do not include any snomed ct codes in the response.
+        5. do not repeat case history in the rationale. keep the rationale concise and to the point.
 
         Keep all responses concise and to the point.
     """
@@ -137,9 +138,9 @@ cot.load("outputs/" + args.trained_file)
 
 def receive_new_data(new_df):
     for index,row in new_df[:].iterrows():
-        if index < 190:
-            continue
-        else:
+        # if index < 190:
+        #     continue
+        # else:
             print("############################################")
             case_id = row["visit_id"]
             gt_diagnosis = row["Diagnosis"]
@@ -184,7 +185,18 @@ def receive_new_data(new_df):
                     "LLM_diagnosis": "",
                     "LLM_conclusion": "",
                     "further_questions": "",
-                    "follow_up_recommendations": ""
+                    # "follow_up_recommendations": ""
+                }
+            elif args.module == 'ddx':
+                resp = {
+                    "case_id": case_id,
+                    "patient_case": patient_case,
+                    "gt_diagnosis": gt_diagnosis,
+                    "LLM_diagnosis": "",
+                    "LLM_rationale": "",
+                    "LLM_conclusion": "",
+                    "further_questions": ""
+                    # "follow_up_recommendations": ""
                 }
             else:
                 resp = {
@@ -239,7 +251,11 @@ def receive_new_data(new_df):
                     resp["LLM_rationale"] = output.output.rationale
                     resp["LLM_conclusion"] = output.output.conclusion
                     resp["further_questions"] = output.output.further_questions
-                    resp["follow_up_recommendations"] = output.output.follow_up_recommendations
+                    # resp["follow_up_recommendations"] = output.output.follow_up_recommendations
+                elif args.module == 'ddx':
+                    resp["LLM_rationale"] = output.output.rationale
+                    resp["LLM_conclusion"] = output.output.conclusion
+                    resp["further_questions"] = output.output.further_questions
             except Exception as e:
                 # Set module-specific empty fields based on module type
                 if args.module == 'telemedicine':
@@ -250,6 +266,10 @@ def receive_new_data(new_df):
                 elif args.module == 'telemedicine_ten':
                     resp["further_questions"] = ""
                     resp["follow_up_recommendations"] = ""
+                elif args.module == 'ddx':
+                    resp["further_questions"] = ""
+                    resp["LLM_conclusion"] = ""
+                    resp["LLM_rationale"] = ""
                 print(e)
                 print("exception happened")
                 resp["LLM_diagnosis"] =  ""
