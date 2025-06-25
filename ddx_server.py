@@ -13,10 +13,37 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from prompt_config import prompt_config
 import logging
+from datetime import datetime
 
-# Enable debug logging
-logging.basicConfig(level=logging.INFO)
+# Custom JSON Formatter for structured logging
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        # Create a log record dictionary
+        log_record = {
+            "timestamp": datetime.utcfromtimestamp(record.created).isoformat() + "Z",
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "logger_name": record.name,
+        }
+        # Add extra fields if they exist
+        if hasattr(record, 'extra_data'):
+            log_record.update(record.extra_data)
+        
+        return json.dumps(log_record)
+
+# Configure logging for ELK format
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.propagate = False  # Prevent duplicate logs in parent loggers
+
+# Remove existing handlers to avoid duplicate logs
+if logger.hasHandlers():
+    logger.handlers.clear()
+
+# Add a stream handler with the custom JSON formatter
+handler = logging.StreamHandler()
+handler.setFormatter(JSONFormatter())
+logger.addHandler(handler)
 
 load_dotenv(
     "ops/.env"
@@ -50,6 +77,8 @@ app = FastAPI()
 class BaseDDxRequest(BaseModel):
     case: str
     model_name: str
+    prompt_version: int
+    tracker: str
 
 class DDxRequestV1(BaseDDxRequest):
     pass
@@ -177,13 +206,23 @@ async def transform_diagnosis_output(llm_output: dict) -> dict:
 
 @app.post("/predict/v1")
 async def ddx_v1(request_body: DDxRequestV1):
-    logger.info("Starting prediction request...")
+    start_time = time.time()
+    log_extra = {
+        'extra_data': {
+            'tracker': request_body.tracker,
+            'model_name': request_body.model_name,
+            'prompt_version': request_body.prompt_version
+        }
+    }
+    logger.info("Starting prediction request...", extra=log_extra)
 
     # Start MLflow run to track this prediction
     with mlflow.start_run(run_name=f"ddx_prediction_{int(time.time())}"):
         # Log request parameters
         mlflow.log_param("model_name", request_body.model_name)
         mlflow.log_param("case_length", len(request_body.case))
+        mlflow.log_param("prompt_version", request_body.prompt_version)
+        mlflow.log_param("tracker", request_body.tracker)
 
         cot = None
         prompt = ""
@@ -226,14 +265,18 @@ async def ddx_v1(request_body: DDxRequestV1):
         dspy_program = dspy.asyncify(cot)
 
         try:
-            logger.info("About to call DSPy program...")
+            logger.info("About to call DSPy program...", extra=log_extra)
             print("prompt selected: ", prompt)
             # Log input data
             mlflow.log_text(request_body.case, "input_case.txt")
             mlflow.log_text(prompt, "prompt_used.txt")
 
+            dspy_start_time = time.time()
             result = await dspy_program(case=request_body.case, question=prompt)
-            logger.info("DSPy program completed!")
+            dspy_latency = time.time() - dspy_start_time
+            log_extra['extra_data']['dspy_latency'] = dspy_latency
+            logger.info(f"DSPy program completed in {dspy_latency:.2f} seconds", extra=log_extra)
+            mlflow.log_metric("dspy_latency", dspy_latency)
             print(result)
 
             # Log the raw result
@@ -249,7 +292,12 @@ async def ddx_v1(request_body: DDxRequestV1):
                 return response_data
 
             # Transform the diagnosis output
+            transform_start_time = time.time()
             transformed_output = await transform_diagnosis_output(result.toDict())
+            transform_latency = time.time() - transform_start_time
+            log_extra['extra_data']['transformation_latency'] = transform_latency
+            logger.info(f"Transformation completed in {transform_latency:.2f} seconds", extra=log_extra)
+            mlflow.log_metric("transformation_latency", transform_latency)
 
             # Log the transformed output
             mlflow.log_text(json.dumps(transformed_output, indent=2), "transformed_output.json")
@@ -263,10 +311,15 @@ async def ddx_v1(request_body: DDxRequestV1):
             mlflow.log_text(json.dumps(response_data, indent=2), "final_response.json")
             mlflow.log_metric("prediction_success", 1)
 
+            total_latency = time.time() - start_time
+            mlflow.log_metric("total_latency", total_latency)
+            log_extra['extra_data']['total_latency'] = total_latency
+            logger.info(f"Prediction successful. Total latency: {total_latency:.2f} seconds", extra=log_extra)
+
             return response_data
 
         except Exception as e:
-            logger.error(f"Error in prediction: {e}")
+            logger.error(f"Error in prediction: {e}", extra=log_extra)
             mlflow.log_param("error", str(e))
             mlflow.log_metric("prediction_success", 0)
             print(e)

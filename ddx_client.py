@@ -421,10 +421,19 @@ Sbp: 130.0
 #     print(response.text)
 
 # Test case for predict/v1 endpoint
+
+# Test case for predict/v1 endpoint
+
+
+patient_case_6 = """Gender: M\nAge: 23\n\nChief_complaint: **Cold, Sneezing**: \n•  2 Hours.\n• Precipitating factors - Cold weather.\n• Prior treatment sought - None.\n• Additional information - Test.\n** Associated symptoms**:  \n• Patient reports -\n Body pain,  Chills \n• Patient denies -\n Cough,  Fever,  Headache,  Itchy throat,  Nasal congestion/Stuffy nose,  Runny nose\n\nPhysical_examination: **General exams: **\n• Eyes: Jaundice-no jaundice seen. \n• Eyes: Pallor-normal pallor. \n• Arm-Pinch skin* - pinch test normal. \n• Nail abnormality-nails normal. \n• Nail anemia-Nails are normal. \n• Ankle-no pedal oedema.\n\nFamily_history: Do you have a family history of any of the following? : • Diabetes, Mother..\n\nMedical_history: • Allergies - No known allergies.\n• Alcohol use - No.\n• Smoking history - Patient denied/has no h/o smoking.\n• Medical History - Diabetes - Current medication - Can't tell the name of a medicine.\n• Drug history - No recent medication.\n\n\n\n"""
+
+patient_case_7 = """
+"""
+
 print("\n\nTesting /predict/v1 endpoint:")
 response_v1 = requests.post(
     "http://127.0.0.1:8000/predict/v1",
-    json={"model_name": "gemini-2.0-flash", "case": patient_case_3}
+    json={"model_name": "gemini-2.0-flash", "case": patient_case_6, "prompt_version": "1", "tracker": "test_tracker_123"}
 )
 
 if response_v1.status_code == 200:
@@ -435,16 +444,3 @@ else:
     print(response_v1.text)
 
 # Test case for predict/v2 endpoint
-print("\n\nTesting /predict/v2 endpoint:")
-response_v2 = requests.post(
-    "http://127.0.0.1:8000/predict/v2",
-    json={"model_name": "gemini-2.0-flash-001", "case": patient_case_4}
-)
-
-if response_v2.status_code == 200:
-    formatted_json = json.dumps(response_v2.json(), indent=4)
-    print(formatted_json)
-else:
-    print(f"Error: {response_v2.status_code}")
-    print(response_v2.text)
-
