@@ -14,36 +14,61 @@ from pydantic import BaseModel
 from prompt_config import prompt_config
 import logging
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 
 # Custom JSON Formatter for structured logging
 class JSONFormatter(logging.Formatter):
     def format(self, record):
-        # Create a log record dictionary
         log_record = {
             "timestamp": datetime.utcfromtimestamp(record.created).isoformat() + "Z",
             "level": record.levelname,
             "message": record.getMessage(),
             "logger_name": record.name,
         }
-        # Add extra fields if they exist
         if hasattr(record, 'extra_data'):
             log_record.update(record.extra_data)
-        
         return json.dumps(log_record)
 
-# Configure logging for ELK format
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logger.propagate = False  # Prevent duplicate logs in parent loggers
+class CustomLogger:
+    def __init__(self, name='ddx_logger', log_file='ddx.log', max_bytes=10485760, backup_count=5):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
+        self.logger.propagate = False
 
-# Remove existing handlers to avoid duplicate logs
-if logger.hasHandlers():
-    logger.handlers.clear()
+        if self.logger.hasHandlers():
+            self.logger.handlers.clear()
 
-# Add a stream handler with the custom JSON formatter
-handler = logging.StreamHandler()
-handler.setFormatter(JSONFormatter())
-logger.addHandler(handler)
+        log_dir = 'logs'
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        log_path = os.path.join(log_dir, log_file)
+
+        file_handler = RotatingFileHandler(log_path, maxBytes=max_bytes, backupCount=backup_count)
+        console_handler = logging.StreamHandler()
+
+        formatter = JSONFormatter()
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(console_handler)
+
+    def info(self, message, *args, **kwargs):
+        self.logger.info(message, *args, **kwargs)
+
+    def error(self, message, *args, **kwargs):
+        self.logger.error(message, *args, **kwargs)
+
+    def warning(self, message, *args, **kwargs):
+        self.logger.warning(message, *args, **kwargs)
+
+    def debug(self, message, *args, **kwargs):
+        self.logger.debug(message, *args, **kwargs)
+
+    def critical(self, message, *args, **kwargs):
+        self.logger.critical(message, *args, **kwargs)
+
+logger = CustomLogger()
 
 load_dotenv(
     "ops/.env"
