@@ -15,6 +15,7 @@ from modules.DDxKBModule import DDxKBModule
 from modules.TelemedicineDDxModuleRAG import TelemedicineDDxModuleRAG
 from modules.TelemedicineICD11DDxModule import TelemedicineICD11DDxModule
 from modules.TelemedicineSnomedCTDDxModule import TelemedicineSnomedCTDDxModule
+from modules.DDxTelemedicineModule import DDxTelemedicineModule
 
 load_dotenv(
     "ops/.env"
@@ -41,11 +42,11 @@ from datetime import datetime
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description='Run differential diagnosis with specified parameters')
-parser.add_argument('--llm', type=str, choices=['openai', 'openai_4_1', 'gemini', 'gemini2', 'gemini_vertex_finetuned' , 'gemini_2_5_flash_vertex', 'medgemma_27b_text_it', 'gemini_2_5_pro', 'hyperbolic_llama_3_3_70b_instruct', 'aws_bedrock_llama_3_2_11b'], required=True,
+parser.add_argument('--llm', type=str, choices=['openai', 'openai_4_1', 'gemini', 'gemini2', 'gemini2_5', 'gemini_vertex_finetuned' , 'gemini_2_5_flash_vertex', 'medgemma_27b_text_it', 'gemini_2_5_pro', 'hyperbolic_llama_3_3_70b_instruct', 'aws_bedrock_llama_3_2_11b'], required=True,
                    help='LLM to use (openai or gemini)')
 parser.add_argument('--num_trials', type=int, default=2,
                    help='Number of trials to run (default: 2)')
-parser.add_argument('--module', type=str, choices=['TelemedicineDDxModule', 'DDxModule', 'DDxLocalModule', 'TelemedicineTenDDxModule', 'DDxKBModule', 'TelemedicineDDxModuleRAG', 'TelemedicineICD11DDxModule', 'TelemedicineSnomedCTDDxModule'], default='TelemedicineDDxModule',
+parser.add_argument('--module', type=str, choices=['TelemedicineDDxModule', 'DDxModule', 'DDxLocalModule', 'TelemedicineTenDDxModule', 'DDxKBModule', 'TelemedicineDDxModuleRAG', 'TelemedicineICD11DDxModule', 'TelemedicineSnomedCTDDxModule', 'DDxTelemedicineModule'], default='TelemedicineDDxModule',
                    help='Module to use for differential diagnosis (default: TelemedicineDDxModule)')
 args = parser.parse_args()
 
@@ -96,8 +97,11 @@ elif args.module == 'TelemedicineICD11DDxModule':
     module_to_compile = TelemedicineICD11DDxModule()
 elif args.module == 'TelemedicineSnomedCTDDxModule':
     module_to_compile = TelemedicineSnomedCTDDxModule()
+elif args.module == 'DDxTelemedicineModule':
+    module_to_compile = DDxTelemedicineModule()
 else:  # Default to TelemedicineDDxModule
     module_to_compile = TelemedicineDDxModule()
+    args.module = 'TelemedicineDDxModule'
 
 optimizedcot = tp.compile(module_to_compile, trainset=trainset, num_trials=args.num_trials)
 
